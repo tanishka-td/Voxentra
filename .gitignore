@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+Capstone_Project_Dataset_FTTT_2026/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+Capstone_Project_Dataset_FTTT_2026/tools/tickets_created.csv

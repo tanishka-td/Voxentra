@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zentromart-support-agent"
+version = "0.1.0"
+description = "VoiceOps 2026 customer support agent for ZentroMart"
+requires-python = ">=3.10"
+dependencies = [
+  "google-genai>=1.0.0",
+  "python-dotenv>=1.0.0",
+  "gnani-vachana>=0.7.7",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
