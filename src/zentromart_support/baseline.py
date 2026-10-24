@@ -64,7 +64,15 @@ def evaluate(model: GeminiTextModel, questions_path: Path, output_path: Path) ->
                     "language": row["language"],
                     "intent": row["intent"],
                     "question": row["question"],
-                    "decision_expected": row["expected_decision"],
+                    "expected_decision": row["expected_decision"],
+                    "acceptable_decisions": [
+                        item.strip()
+                        for item in row["acceptable_decisions"].split(";")
+                        if item.strip()
+                    ],
+                    "answerable": row["answerable"] == "True",
+                    "must_include": row["must_include"],
+                    "must_not_include": row["must_not_include"],
                     "gold_evidence": [
                         item.strip()
                         for item in row["gold_evidence"].split(";")
@@ -87,7 +95,7 @@ def evaluate(model: GeminiTextModel, questions_path: Path, output_path: Path) ->
             print(f"Processed {count}: {row['id']}")
 
     print(f"Saved {count} responses to {output_path}")
-    print("This file captures the baseline; answer scoring will be added with the evaluation phase.")
+    print("Score these responses with `python -m zentromart_support.score_practice outputs/step1_baseline.jsonl`.")
 
 
 def main() -> None:

@@ -126,7 +126,11 @@ def score_record(record: dict[str, Any]) -> dict[str, Any]:
         for item in record.get("retrieved_evidence", [])
     }
     gold = set(record.get("gold_evidence") or [])
-    evidence_hit = bool(gold.intersection(evidence_ids)) if gold else None
+    evidence_hit = (
+        bool(gold.intersection(evidence_ids))
+        if gold and "retrieved_evidence" in record
+        else None
+    )
     passed = not missing and not forbidden_hits and decision_correct is not False
     return {
         "id": record.get("id"),
@@ -148,6 +152,8 @@ def main() -> None:
 
     records = [json.loads(line) for line in args.results.read_text(encoding="utf-8").splitlines() if line.strip()]
     scores = [score_record(record) for record in records if "error" not in record]
+    decision_scores = [item["decision_correct"] for item in scores if item["decision_correct"] is not None]
+    evidence_scores = [item["evidence_hit"] for item in scores if item["evidence_hit"] is not None]
     summary = {
         "scoring_note": "Approximate local rubric check. It checks listed facts, literal forbidden phrases, decisions when available, and evidence overlap; it is not the organizers' official scorer.",
         "responses_scored": len(scores),
@@ -155,12 +161,12 @@ def main() -> None:
         "approximate_pass_rate": sum(item["approximate_pass"] for item in scores) / max(1, len(scores)),
         "fact_coverage": sum(item["fact_groups_passed"] for item in scores) / max(1, sum(item["fact_groups"] for item in scores)),
         "decision_accuracy": (
-            sum(item["decision_correct"] is True for item in scores if item["decision_correct"] is not None)
-            / max(1, sum(item["decision_correct"] is not None for item in scores))
+            sum(value is True for value in decision_scores) / len(decision_scores)
+            if decision_scores else None
         ),
         "retrieval_hit_rate": (
-            sum(item["evidence_hit"] is True for item in scores if item["evidence_hit"] is not None)
-            / max(1, sum(item["evidence_hit"] is not None for item in scores))
+            sum(value is True for value in evidence_scores) / len(evidence_scores)
+            if evidence_scores else None
         ),
         "per_question": scores,
     }

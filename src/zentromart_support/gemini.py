@@ -19,6 +19,7 @@ class GeminiTextModel:
 
         try:
             from google import genai
+            from google.genai import types
         except ImportError as exc:
             raise RuntimeError(
                 "Gemini support is not installed. Run `python -m pip install -e .`."
@@ -29,18 +30,27 @@ class GeminiTextModel:
                 "Set GEMINI_API_KEY in your environment before calling Gemini."
             )
 
-        self._client = genai.Client()
+        # Keep smoke tests and batch runs bounded when the service stalls.
+        self._types = types
+        self._client = genai.Client(
+            http_options=types.HttpOptions(
+                timeout=60_000,
+                retry_options=types.HttpRetryOptions(attempts=3),
+            )
+        )
         self.model_name = model_name or os.getenv(
             "GEMINI_MODEL", "gemini-3.8-flash"
         )
 
     def generate(self, *, system_instruction: str, prompt: str) -> str:
-        response = self._client.interactions.create(
+        response = self._client.models.generate_content(
             model=self.model_name,
-            system_instruction=system_instruction,
-            input=prompt,
+            config=self._types.GenerateContentConfig(
+                system_instruction=system_instruction,
+            ),
+            contents=prompt,
         )
-        text = (response.output_text or "").strip()
+        text = (response.text or "").strip()
         if not text:
             raise RuntimeError("Gemini returned an empty text response.")
         return text
