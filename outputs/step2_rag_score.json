@@ -1,0 +1,563 @@
+{
+  "scoring_note": "Approximate local rubric check. It checks listed facts, literal forbidden phrases, decisions when available, and evidence overlap; it is not the organizers' official scorer.",
+  "responses_scored": 52,
+  "approximate_passes": 34,
+  "approximate_pass_rate": 0.6538461538461539,
+  "fact_coverage": 0.7241379310344828,
+  "decision_accuracy": 0.9230769230769231,
+  "retrieval_hit_rate": 1.0,
+  "per_question": [
+    {
+      "id": "PQ0002",
+      "fact_groups": 2,
+      "fact_groups_passed": 2,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0003",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0004",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": null,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0005",
+      "fact_groups": 2,
+      "fact_groups_passed": 1,
+      "missing_facts": [
+        "12"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0006",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0008",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "2026-10-27/27 October 2026/27 अक्टूबर 2026"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0009",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": null,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0010",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0013",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0014",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0015",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": null,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0016",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0018",
+      "fact_groups": 0,
+      "fact_groups_passed": 0,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": false,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0019",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0020",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "15"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": false,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0021",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0022",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "2026-10-27/27 October 2026/27 अक्टूबर 2026"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0023",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0024",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "15"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": false,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0025",
+      "fact_groups": 2,
+      "fact_groups_passed": 2,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0026",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "12"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0027",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "2026-10-15/15 October 2026/15 अक्टूबर 2026"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0028",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "2026-10-21/21 October 2026/21 अक्टूबर 2026"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0029",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "2026-10-21/21 October 2026/21 अक्टूबर 2026"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0030",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "ticket/colleague/team/Priority Resolution"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0031",
+      "fact_groups": 2,
+      "fact_groups_passed": 2,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0032",
+      "fact_groups": 2,
+      "fact_groups_passed": 1,
+      "missing_facts": [
+        "12"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0033",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "2026-10-24/24 October 2026/24 अक्टूबर 2026"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0034",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0035",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "2026-10-17/17 October 2026/17 अक्टूबर 2026"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0036",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0037",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "don't have/do not have/not sure/no information/can't find/not able to find/couldn't find/जानकारी नहीं/pata nahi/jaankari nahi/connect/सहयोगी"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": null,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0039",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": false,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0040",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0041",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0042",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0044",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0045",
+      "fact_groups": 2,
+      "fact_groups_passed": 2,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0046",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0047",
+      "fact_groups": 2,
+      "fact_groups_passed": 2,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0048",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0049",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0050",
+      "fact_groups": 3,
+      "fact_groups_passed": 3,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0051",
+      "fact_groups": 0,
+      "fact_groups_passed": 0,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0052",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "2026-10-24/24 October 2026/24 अक्टूबर 2026"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0053",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": null,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0054",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0056",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0057",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0058",
+      "fact_groups": 1,
+      "fact_groups_passed": 1,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    },
+    {
+      "id": "PQ0059",
+      "fact_groups": 1,
+      "fact_groups_passed": 0,
+      "missing_facts": [
+        "2026-10-22/22 October 2026/22 अक्टूबर 2026"
+      ],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": false
+    },
+    {
+      "id": "PQ0060",
+      "fact_groups": 0,
+      "fact_groups_passed": 0,
+      "missing_facts": [],
+      "forbidden_claims": [],
+      "decision_correct": true,
+      "evidence_hit": true,
+      "approximate_pass": true
+    }
+  ]
+}

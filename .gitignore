@@ -6,4 +6,5 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+.cache/
 Capstone_Project_Dataset_FTTT_2026/tools/tickets_created.csv

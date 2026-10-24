@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 
 
 class GeminiTextModel:
@@ -39,10 +40,17 @@ class GeminiTextModel:
             )
         )
         self.model_name = model_name or os.getenv(
-            "GEMINI_MODEL", "gemini-3.8-flash"
+            "GEMINI_MODEL", "gemini-3.5-flash-lite"
         )
+        self._min_request_interval = float(
+            os.getenv("GEMINI_MIN_REQUEST_INTERVAL_SECONDS", "4.5")
+        )
+        self._last_request_at = 0.0
 
     def generate(self, *, system_instruction: str, prompt: str) -> str:
+        wait = self._min_request_interval - (time.monotonic() - self._last_request_at)
+        if self._last_request_at and wait > 0:
+            time.sleep(wait)
         response = self._client.models.generate_content(
             model=self.model_name,
             config=self._types.GenerateContentConfig(
@@ -50,6 +58,7 @@ class GeminiTextModel:
             ),
             contents=prompt,
         )
+        self._last_request_at = time.monotonic()
         text = (response.text or "").strip()
         if not text:
             raise RuntimeError("Gemini returned an empty text response.")

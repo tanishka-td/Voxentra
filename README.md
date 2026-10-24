@@ -7,19 +7,19 @@ and is excluded from Git and submission packages.
 ## Current stages: text baseline, retrieval, conversations, and voice wrapper
 
 The Step 1 baseline asks Gemini to answer a customer question without company
-documents or order tools. It saves each practice response and its metadata as
-JSONL so we can compare it with the grounded agent. The Step 2 agent retrieves
-section-level policy evidence and catalog rows using BM25 and records the exact
-retrieved chunks with each reply. A multi-turn controller wraps the same agent
-with the supplied identity-checked order and ticket tools.
+documents or order tools. It saves each practice response and its rubric metadata
+as JSONL so we can compare it with the grounded agent. The grounded agent uses
+Gemini embeddings and BM25 together, keeps section IDs and document metadata, and
+records the exact evidence chunks with each reply. A multi-turn controller wraps
+the same agent with the supplied identity-checked order and ticket tools.
 The Gnani wrapper uses the supplied speech API for transcription and synthesis.
 
 ### Setup
 
 1. Install Python 3.10 or newer.
 2. Install the project: `python -m pip install -e .`
-3. Copy `.env.example` to `.env` and add your `GEMINI_API_KEY`. `GEMINI_MODEL` is
-   optional and defaults to `gemini-3.8-flash`.
+3. Copy `.env.example` to `.env` and add your `GEMINI_API_KEY`. The text model
+   defaults to `gemini-3.5-flash-lite`; embeddings use `gemini-embedding-001`.
 
 Never commit your API key. `.env` files are ignored; `.env.example` contains only
 variable names and safe defaults.
@@ -35,12 +35,23 @@ variable names and safe defaults.
 Responses are saved to `outputs/step1_baseline.jsonl`. The dataset must be present
 at the project root, or set `DATASET_DIR` to its extracted folder.
 
-### Evaluate retrieval without API calls
+### Evaluate hybrid retrieval
 
 `python -m zentromart_support.retrieval_eval --top-k 5`
 
-This compares retrieved evidence IDs with the practice set's gold evidence and
-saves per-question results to `outputs/retrieval_eval.jsonl`.
+This embeds the knowledge base and practice questions, combines semantic ranking
+with BM25, and compares evidence IDs with the practice set's gold labels. Document
+vectors are cached under `.cache/`; per-question rankings are saved to
+`outputs/retrieval_eval.jsonl`. Use `--lexical-only` to evaluate the offline BM25
+fallback without making embedding API calls.
+
+### Evaluate grounded answers
+
+`python -m zentromart_support.question_eval`
+
+This sends all 52 practice questions to the grounded agent and saves replies,
+retrieved evidence, and rubric fields to `outputs/step2_rag.jsonl`. Score them with
+`python -m zentromart_support.score_practice outputs/step2_rag.jsonl --output outputs/step2_rag_score.json`.
 
 ### Try the grounded agent
 
