@@ -52,6 +52,12 @@ fallback without making embedding API calls.
 This sends all 52 practice questions to the grounded agent and saves replies,
 retrieved evidence, and rubric fields to `outputs/step2_rag.jsonl`. Score them with
 `python -m zentromart_support.score_practice outputs/step2_rag.jsonl --output outputs/step2_rag_score.json`.
+The runner resumes valid responses already in the output file; pass `--overwrite`
+to regenerate them after changing the agent. Product warranty and return-window
+facts, refund timelines and dates, and pincode availability use deterministic
+lookups/rules where the question contains enough information. Refund business-day
+calculations exclude Sundays and the dataset holidays; the dataset reference date
+is 20 October 2026.
 
 ### Try the grounded agent
 

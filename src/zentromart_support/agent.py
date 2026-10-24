@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from .gemini import GeminiTextModel
 from .retrieval import Evidence, KnowledgeRetriever
+from .structured_data import StructuredSupportData
 
 
 RAG_SYSTEM_INSTRUCTION = """You are ZentroMart's AI customer-support assistant.
@@ -80,6 +81,8 @@ class GroundedTextAgent:
         self.retriever = retriever
         self.model = model or GeminiTextModel()
         self.top_k = top_k
+        self.structured_data = StructuredSupportData(retriever.dataset_dir)
+        self._evidence_by_id = {item.evidence_id: item for item in retriever.evidence}
 
     def respond(
         self,
@@ -89,6 +92,23 @@ class GroundedTextAgent:
         extra_evidence: list[dict[str, Any]] | None = None,
         conversation_context: list[str] | None = None,
     ) -> AgentResult:
+        if not extra_context and not extra_evidence:
+            structured = self.structured_data.answer_question(question)
+            if structured is not None:
+                supported = []
+                for evidence_id in structured.evidence_ids:
+                    item = self._evidence_by_id.get(evidence_id)
+                    if item is not None:
+                        record = asdict(item)
+                        record["score"] = 1.0
+                        supported.append(record)
+                return AgentResult(
+                    question=question,
+                    reply=structured.reply,
+                    retrieved_evidence=supported,
+                    decision=structured.decision,
+                )
+
         context_lines = [line for line in (conversation_context or []) if line.strip()]
         retrieval_query = " ".join(context_lines[-3:] + [question.strip()])
         evidence = self.retriever.retrieve(retrieval_query, top_k=self.top_k)

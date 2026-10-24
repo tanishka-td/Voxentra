@@ -74,9 +74,12 @@ def main() -> None:
             raise SystemExit(1) from exc
 
     pending_rows = [row for row in selected_rows if row["id"] not in completed]
+    # Deterministic data/rule answers do not need query embeddings. Prepare
+    # vectors only for questions that will go through document retrieval.
     retriever.prepare_queries([
         expected_questions[row["id"]]
         for row in pending_rows
+        if agent.structured_data.answer_question(expected_questions[row["id"]]) is None
     ])
 
     # Rewrite the valid checkpoint once to remove duplicate or stale lines,
