@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+import traceback
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -78,7 +79,8 @@ def main() -> None:
             print(f"Processed {audio_path.name}")
         except Exception as exc:
             record["error"] = type(exc).__name__
-            print(f"Failed {audio_path.name}: {type(exc).__name__}", file=sys.stderr)
+            print(f"Failed {audio_path.name}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            traceback.print_exc()
         with base.with_suffix(".json").open("w", encoding="utf-8") as target:
             json.dump(record, target, ensure_ascii=False, indent=2)
             target.write("\n")

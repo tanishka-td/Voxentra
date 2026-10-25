@@ -37,6 +37,61 @@ REFUND_DAYS = {
     "cod_bank": (5, 7),
 }
 
+_ASR_DIGITS = {
+    "zero": "0", "oh": "0", "one": "1", "two": "2", "to": "2",
+    "too": "2", "three": "3", "four": "4", "for": "4", "five": "5",
+    "six": "6", "seven": "7", "eight": "8", "ate": "8", "nine": "9",
+}
+_ASR_NUMBER_WORD = "(?:" + "|".join(sorted(_ASR_DIGITS, key=len, reverse=True)) + ")"
+
+
+def normalize_asr_text(text: str) -> str:
+    """Conservatively normalize common speech-transcription artifacts."""
+    value = text
+    value = re.sub(r"\bre\s+fund\b", "refund", value, flags=re.IGNORECASE)
+    value = re.sub(r"\bu\s+p\s+i\b", "UPI", value, flags=re.IGNORECASE)
+    value = re.sub(r"\bkurtha\b", "kurta", value, flags=re.IGNORECASE)
+
+    # Spoken SKU digits are unambiguous after a three-letter product prefix.
+    sku_pattern = re.compile(
+        rf"\bsku\s+([a-z]{{3}})[ -]+({_ASR_NUMBER_WORD}(?:[ -]+{_ASR_NUMBER_WORD}){{3}})\b",
+        re.IGNORECASE,
+    )
+    value = sku_pattern.sub(
+        lambda match: f"SKU {match[1].upper()}-" + "".join(
+            _ASR_DIGITS[token.casefold()]
+            for token in re.split(r"[ -]+", match[2])
+        ),
+        value,
+    )
+
+    # ASR spells some catalog values as separate digits before the unit.
+    spoken_digits = re.compile(
+        rf"\b({_ASR_NUMBER_WORD}(?:[ -]+{_ASR_NUMBER_WORD})+)\s+(mah|gb)\b",
+        re.IGNORECASE,
+    )
+    value = spoken_digits.sub(
+        lambda match: "".join(
+            _ASR_DIGITS[token.casefold()]
+            for token in re.split(r"[ -]+", match[1])
+        ) + f" {match[2]}",
+        value,
+    )
+
+    # ASR often spells the year digit by digit after a month name.
+    month_names = "|".join(sorted((re.escape(name) for name in MONTHS), key=len, reverse=True))
+    spoken_years = (
+        r"two\s+zero\s+two\s+six|to\s+zero\s+to\s+six|"
+        r"twenty\s+twenty\s+six|twenty\s+twenty-six"
+    )
+    value = re.sub(
+        rf"\b({month_names})\s+({spoken_years})\b",
+        lambda match: f"{match[1]} 2026",
+        value,
+        flags=re.IGNORECASE,
+    )
+    return value
+
 
 @dataclass(frozen=True)
 class StructuredAnswer:
@@ -242,7 +297,7 @@ class StructuredSupportData:
 
     def _return_answer(self, question: str, product: dict[str, str] | None) -> StructuredAnswer | None:
         normalized = _normalize(question)
-        terms = ("return", "send back", "लौट", "वापस")
+        terms = ("return", "send back", "send it back", "लौट", "वापस")
         is_fee = any(term in normalized for term in ("pickup fee", "collection fee", "return fee", "charged", "charge", "collection", "pickup"))
         if not any(term in normalized for term in terms) and not is_fee:
             return None
@@ -250,7 +305,7 @@ class StructuredSupportData:
         title_query = normalized
         if product is None:
             for candidate, keywords in {
-                "electronics": ("electronics", "electronic", "फोन", "मोबाइल"),
+                "electronics": ("electronics", "electronic", "smartphone", "phone", "फोन", "मोबाइल"),
                 "fashion": ("fashion", "clothing", "clothes", "shoes", "jeans", "bag", "kurta", "जूते", "कपड़े"),
                 "home_kitchen": ("home", "kitchen", "furniture", "bedsheet", "घर"),
                 "books_media": ("book", "stationery", "notebook", "books"),
@@ -369,15 +424,34 @@ class StructuredSupportData:
             body += f" Express delivery is {'available' if row.get('express_available', '').casefold() == 'true' else 'not available'} there."
         return StructuredAnswer(self._greet(question, body), (f"pincodes.csv:{pincode}", "DEL-5"))
 
+    def _late_express_answer(self, question: str) -> StructuredAnswer | None:
+        normalized = _normalize(question)
+        mentions_late_delivery = any(
+            term in normalized
+            for term in ("late", "delayed", "delay", "der se", "late hua", "late aaya")
+        )
+        if "express" not in normalized or not mentions_late_delivery:
+            return None
+        body = (
+            "If an Express order arrives after its promised date, the ₹79 Express fee paid "
+            "is credited to ZentroMart Wallet automatically within 48 hours. Plus members "
+            "pay no Express fee, so they do not receive this credit."
+        )
+        return StructuredAnswer(self._greet(question, body), ("DEL-4", "DEL-2", "PLS-2"))
+
     def answer_question(self, question: str) -> StructuredAnswer | None:
         """Answer only when structured fields and deterministic rules are sufficient."""
+        question = normalize_asr_text(question)
         normalized = _normalize(question)
         product = self._product_from_question(question)
-        if product and "warranty" in normalized:
+        if product and any(term in normalized for term in ("warranty", "assured", "claim")):
             return self._warranty_answer(question, product)
         refund = self._refund_answer(question)
         if refund is not None:
             return refund
+        late_express = self._late_express_answer(question)
+        if late_express is not None:
+            return late_express
         return_answer = self._return_answer(question, product)
         if return_answer is not None:
             return return_answer

@@ -9,7 +9,7 @@ from typing import Any
 
 from .gemini import GeminiTextModel
 from .retrieval import Evidence, KnowledgeRetriever
-from .structured_data import StructuredSupportData
+from .structured_data import StructuredSupportData, normalize_asr_text
 
 
 RAG_SYSTEM_INSTRUCTION = """You are ZentroMart's AI customer-support assistant.
@@ -92,8 +92,9 @@ class GroundedTextAgent:
         extra_evidence: list[dict[str, Any]] | None = None,
         conversation_context: list[str] | None = None,
     ) -> AgentResult:
+        normalized_question = normalize_asr_text(question.strip())
         if not extra_context and not extra_evidence:
-            structured = self.structured_data.answer_question(question)
+            structured = self.structured_data.answer_question(normalized_question)
             if structured is not None:
                 supported = []
                 for evidence_id in structured.evidence_ids:
@@ -110,7 +111,7 @@ class GroundedTextAgent:
                 )
 
         context_lines = [line for line in (conversation_context or []) if line.strip()]
-        retrieval_query = " ".join(context_lines[-3:] + [question.strip()])
+        retrieval_query = " ".join(context_lines[-3:] + [normalized_question])
         evidence = self.retriever.retrieve(retrieval_query, top_k=self.top_k)
         context_block = f"\n\nVerified structured data:\n{extra_context}" if extra_context else ""
         history_block = (
@@ -118,7 +119,12 @@ class GroundedTextAgent:
             if context_lines else ""
         )
         prompt = (
-            f"Customer question:\n{question.strip()}\n\n"
+            f"Customer question transcript:\n{question.strip()}\n\n"
+            + (
+                f"Conservative transcript normalization:\n{normalized_question}\n\n"
+                if normalized_question != question.strip() else ""
+            )
+            +
             f"{history_block}"
             f"Reference date for this dataset: 20 October 2026.\n\n"
             f"Retrieved evidence:\n{_format_evidence(evidence)}"

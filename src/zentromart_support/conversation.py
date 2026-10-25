@@ -32,7 +32,7 @@ HUMAN_RE = re.compile(r"\b(human|person|agent|representative|speak to someone)\b
 FRAUD_RE = re.compile(r"\b(never ordered|never placed|did not order|didn't order|unauthori[sz]ed|fraud|not mine)\b", re.I)
 LEGAL_RE = re.compile(r"\b(legal action|consumer court|police complaint|police)\b", re.I)
 SAFETY_RE = re.compile(r"\b(swelling battery|swollen battery|burning smell|sparks?|smoke|caught fire|injury|electric shock)\b", re.I)
-DAMAGE_RE = re.compile(r"\b(damaged|damage|cracked|broken|defective|wrong item|missing item|torn|expired)\b", re.I)
+DAMAGE_RE = re.compile(r"\b(damaged|damage|cracked|crack|broken|defective|wrong item|missing item|torn|expired)\b", re.I)
 
 ORDER_FIELDS = (
     "order_id", "status", "placed_at", "payment_method", "delivery_type",

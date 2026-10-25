@@ -12,7 +12,9 @@ as JSONL so we can compare it with the grounded agent. The grounded agent uses
 Gemini embeddings and BM25 together, keeps section IDs and document metadata, and
 records the exact evidence chunks with each reply. A multi-turn controller wraps
 the same agent with the supplied identity-checked order and ticket tools.
-The Gnani wrapper uses the supplied speech API for transcription and synthesis.
+The Gnani wrapper uses WebSocket streaming for speech recognition and real-time
+streaming for speech synthesis. It sends the transcription through the same
+conversation controller and saves the reply as WAV audio.
 
 ### Setup
 
@@ -92,7 +94,11 @@ example `--conversation-id PC003 --conversation-id PC004`.
 The runner accepts WAV, MP3, FLAC, OGG, and M4A inputs. Each file is treated as
 one conversation; use the interactive conversation runner to try follow-up turns.
 Configure the speech languages, voice, and model in `.env` or pass the language
-flags to the batch command. The only configured speech provider is Gnani.
+flags to the batch command. Set `GNANI_API_KEY` in your ignored local `.env`; do
+not commit or share it. A 16 kHz, mono, 16-bit PCM WAV works without conversion.
+Other supported input formats need `ffmpeg` installed so they can be converted to
+the PCM frames required by Gnani's STT WebSocket. The only configured speech
+provider is Gnani.
 
 ## Dataset validation
 
