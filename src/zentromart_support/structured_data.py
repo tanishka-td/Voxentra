@@ -8,7 +8,6 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any
 
 
 REFERENCE_DATE = date(2026, 10, 20)

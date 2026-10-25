@@ -11,7 +11,6 @@ import subprocess
 import wave
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from dotenv import load_dotenv
 
@@ -47,6 +46,8 @@ def _under_thousand_words(number: int) -> str:
 
 
 def _number_words(number: int) -> str:
+    if number == 0:
+        return "zero"
     if number < 1000:
         return _under_thousand_words(number)
     for size, label in ((10_000_000, "crore"), (100_000, "lakh"), (1000, "thousand")):

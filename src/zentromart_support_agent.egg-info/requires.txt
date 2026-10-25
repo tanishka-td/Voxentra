@@ -1,3 +1,0 @@
-google-genai>=1.0.0
-python-dotenv>=1.0.0
-gnani-vachana>=0.7.7

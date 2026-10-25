@@ -8,3 +8,11 @@ __pycache__/
 venv/
 .cache/
 Capstone_Project_Dataset_FTTT_2026/tools/tickets_created.csv
+/outputs/
+/Voice_samples/
+/Voice_samples_express/
+/voice_samples/
+/voice_samples_express/
+*.egg-info/
+build/
+dist/

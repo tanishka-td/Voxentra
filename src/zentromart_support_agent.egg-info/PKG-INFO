@@ -1,8 +1,0 @@
-Metadata-Version: 2.4
-Name: zentromart-support-agent
-Version: 0.1.0
-Summary: VoiceOps 2026 customer support agent for ZentroMart
-Requires-Python: >=3.10
-Requires-Dist: google-genai>=1.0.0
-Requires-Dist: python-dotenv>=1.0.0
-Requires-Dist: gnani-vachana>=0.7.7

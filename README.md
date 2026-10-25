@@ -1,109 +1,139 @@
 # ZentroMart VoiceOps support agent
 
-This project will build the VoiceOps 2026 support agent in stages. The local
-capstone dataset is kept in `Capstone_Project_Dataset_FTTT_2026/` for development
-and is excluded from Git and submission packages.
+A staged implementation of the VoiceOps 2026 customer-support agent. It combines
+Gemini-based grounded responses, local policy and catalog data, identity-checked
+order tools, and Gnani speech recognition and synthesis.
 
-## Current stages: text baseline, retrieval, conversations, and voice wrapper
+The capstone dataset is required locally for development. It is not included in
+this repository or in a submission package.
 
-The Step 1 baseline asks Gemini to answer a customer question without company
-documents or order tools. It saves each practice response and its rubric metadata
-as JSONL so we can compare it with the grounded agent. The grounded agent uses
-Gemini embeddings and BM25 together, keeps section IDs and document metadata, and
-records the exact evidence chunks with each reply. A multi-turn controller wraps
-the same agent with the supplied identity-checked order and ticket tools.
-The Gnani wrapper uses WebSocket streaming for speech recognition and real-time
-streaming for speech synthesis. It sends the transcription through the same
-conversation controller and saves the reply as WAV audio.
-
-### Setup
+## Setup
 
 1. Install Python 3.10 or newer.
-2. Install the project: `python -m pip install -e .`
-3. Copy `.env.example` to `.env` and add your `GEMINI_API_KEY`. The text model
-   defaults to `gemini-3.5-flash-lite`; embeddings use `gemini-embedding-001`.
+2. Install the project dependencies:
 
-Never commit your API key. `.env` files are ignored; `.env.example` contains only
-variable names and safe defaults.
+   ```powershell
+   python -m pip install -e .
+   ```
 
-### Run one question
+   If running directly from the source folder in PowerShell, set the import path
+   for the current session with `$env:PYTHONPATH = "$PWD\src"`.
 
-`python -m zentromart_support.baseline`
+3. Create a local environment file and add your `GEMINI_API_KEY`:
 
-### Capture the Step 1 practice responses
+   ```powershell
+   Copy-Item .env.example .env
+   ```
 
-`python -m zentromart_support.baseline --evaluate`
+   Add `GNANI_API_KEY` to `.env` to use voice features. Keep both keys private.
+4. Extract `Capstone_Project_Dataset_FTTT_2026` into the project folder, or set
+   `DATASET_DIR` to its location.
 
-Responses are saved to `outputs/step1_baseline.jsonl`. The dataset must be present
-at the project root, or set `DATASET_DIR` to its extracted folder.
+The text model defaults to `gemini-3.5-flash-lite`; embeddings default to
+`gemini-embedding-001`. Voice language defaults to `en-IN`. Speech language,
+voice, and model can be configured in `.env`.
 
-### Evaluate hybrid retrieval
+## Run the text agent
 
-`python -m zentromart_support.retrieval_eval --top-k 5`
+Start an interactive prompt-only baseline:
 
-This embeds the knowledge base and practice questions, combines semantic ranking
-with BM25, and compares evidence IDs with the practice set's gold labels. Document
-vectors are cached under `.cache/`; per-question rankings are saved to
-`outputs/retrieval_eval.jsonl`. Use `--lexical-only` to evaluate the offline BM25
-fallback without making embedding API calls.
+```powershell
+python -m zentromart_support.baseline
+```
 
-### Evaluate grounded answers
+Run it against the 52 practice questions:
 
-`python -m zentromart_support.question_eval`
+```powershell
+python -m zentromart_support.baseline --evaluate
+```
 
-This sends all 52 practice questions to the grounded agent and saves replies,
-retrieved evidence, and rubric fields to `outputs/step2_rag.jsonl`. Score them with
-`python -m zentromart_support.score_practice outputs/step2_rag.jsonl --output outputs/step2_rag_score.json`.
-The runner resumes valid responses already in the output file; pass `--overwrite`
-to regenerate them after changing the agent. Product warranty and return-window
-facts, refund timelines and dates, and pincode availability use deterministic
-lookups/rules where the question contains enough information. Refund business-day
-calculations exclude Sundays and the dataset holidays; the dataset reference date
-is 20 October 2026.
+Try the grounded agent with one question:
 
-### Try the grounded agent
+```powershell
+python -m zentromart_support.chat "How long does a UPI refund take?" --evidence-json
+```
 
-`python -m zentromart_support.chat "How long does a UPI refund take?" --evidence-json`
+The grounded agent retrieves policy evidence and uses deterministic lookups for
+supported product, refund, late Express credit, return-window, and pincode
+questions. It records the evidence IDs used for each response.
 
-### Try a multi-turn support conversation
+## Evaluate retrieval and answers
 
-`python -m zentromart_support.conversation_cli --output outputs/local_turns.jsonl`
+Evaluate hybrid retrieval against the evidence labels:
 
-The conversation controller asks for order verification before it shares order
-facts. Its optional turn log redacts verification numbers and omits them from tool
-call records. While verification is pending, general policy questions can still be
-answered; order-specific follow-ups stay behind the verification gate. After two
-failed attempts, the order remains locked for the rest of that conversation.
+```powershell
+python -m zentromart_support.retrieval_eval --top-k 5
+```
 
-### Evaluate multi-turn conversations
+Use `--lexical-only` to skip embedding API calls and evaluate the BM25 fallback.
+Retrieval rankings and cached vectors are written under `outputs/` and `.cache/`.
 
-`python -m zentromart_support.conversation_eval --lexical-only`
+Generate grounded answers for the practice questions:
 
-This runs the supplied 23 conversation scenarios and saves per-turn decisions,
-tool calls, evidence IDs, and approximate local checks to
-`outputs/step3_conversations.jsonl`. It may create synthetic handover tickets in
-the dataset tool folder. Use `--limit 1` for a small first run, or `--overwrite`
-to replace an existing report. To rerun only selected scenarios without
-recreating tickets from the rest of the set, repeat `--conversation-id`, for
-example `--conversation-id PC003 --conversation-id PC004`.
+```powershell
+python -m zentromart_support.question_eval
+```
 
-### Process a folder of voice messages
+Use `--asr-text` to evaluate the supplied speech-like transcripts. This is text
+evaluation; the dataset does not contain audio recordings. Score a JSONL result:
 
-`python -m zentromart_support.batch_run path/to/audio_folder --output outputs/voice_batch`
+```powershell
+python -m zentromart_support.score_practice outputs/step2_rag.jsonl --output outputs/step2_rag_score.json
+```
 
-The runner accepts WAV, MP3, FLAC, OGG, and M4A inputs. Each file is treated as
-one conversation; use the interactive conversation runner to try follow-up turns.
-Configure the speech languages, voice, and model in `.env` or pass the language
-flags to the batch command. Set `GNANI_API_KEY` in your ignored local `.env`; do
-not commit or share it. A 16 kHz, mono, 16-bit PCM WAV works without conversion.
-Other supported input formats need `ffmpeg` installed so they can be converted to
-the PCM frames required by Gnani's STT WebSocket. The only configured speech
-provider is Gnani.
+The local scorer is approximate, not the organizers' official scorer. Practice
+answer generation uses Gemini requests and may be interrupted by API quotas; the
+runner can resume from valid responses already in the output file. Use
+`--overwrite` to regenerate a result after changing the agent.
 
-## Dataset validation
+## Run multi-turn conversations
 
-The supplied dataset validator can be run from its folder:
+Start an interactive text conversation:
 
-`python validate_dataset.py`
+```powershell
+python -m zentromart_support.conversation_cli --output outputs/local_turns.jsonl
+```
 
-The dataset itself must not be included in the final submission ZIP.
+The conversation controller verifies a caller before sharing order facts, allows
+general policy questions while verification is pending, and limits verification
+to two attempts. Turn logs redact verification numbers.
+
+Evaluate the supplied conversation scenarios:
+
+```powershell
+python -m zentromart_support.conversation_eval --lexical-only
+```
+
+This writes per-turn decisions, tool calls, evidence IDs, and approximate checks to
+`outputs/step3_conversations.jsonl`. It can create synthetic handover tickets in
+the dataset's tools folder. Use `--limit 1` for a small run, `--overwrite` to
+replace an existing report, or repeat `--conversation-id` to select specific
+scenarios.
+
+## Process voice messages
+
+Put WAV, MP3, FLAC, OGG, or M4A files in a folder and run:
+
+```powershell
+python -m zentromart_support.batch_run path/to/audio_folder --output outputs/voice_batch
+```
+
+Each input file starts a separate, single-turn conversation. The interactive
+conversation interface accepts text follow-up turns. The batch runner saves a
+transcript, reply text, evidence record, and reply audio for each file. Gnani is
+the only configured speech provider. A 16 kHz, mono, 16-bit PCM WAV works without
+conversion; other input audio requires `ffmpeg` to convert it for Gnani STT.
+
+## Validate the dataset
+
+From the project folder, run:
+
+```powershell
+python Capstone_Project_Dataset_FTTT_2026/validate_dataset.py
+```
+
+## Local-only files
+
+`.env`, the dataset, generated `outputs/`, embedding cache, local voice samples,
+and Python build metadata are ignored by Git. Keep API keys and personal voice
+recordings out of the submission package.

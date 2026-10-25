@@ -6,7 +6,6 @@ import argparse
 import json
 import re
 import unicodedata
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
