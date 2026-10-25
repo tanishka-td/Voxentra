@@ -21,7 +21,10 @@ def _root() -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", type=Path, default=Path(os.getenv("DATASET_DIR", _root() / "Capstone_Project_Dataset_FTTT_2026")))
-    parser.add_argument("--output", type=Path, default=_root() / "outputs" / "step2_rag.json")
+    parser.add_argument(
+        "--output", type=Path,
+        default=_root() / "outputs" / "phase2_rag" / "step2_rag.json",
+    )
     parser.add_argument("--limit", type=int, help="Optional maximum number of questions to send to Gemini.")
     parser.add_argument(
         "--overwrite",

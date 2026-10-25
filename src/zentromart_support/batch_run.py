@@ -29,7 +29,9 @@ def main() -> None:
     root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("audio_folder", type=Path, help="Folder containing audio files to process.")
-    parser.add_argument("--output", type=Path, default=root / "outputs" / "voice_batch")
+    parser.add_argument(
+        "--output", type=Path, default=root / "outputs" / "phase4_voice" / "voice_batch"
+    )
     parser.add_argument("--dataset", type=Path, default=Path(os.getenv("DATASET_DIR", root / "Capstone_Project_Dataset_FTTT_2026")))
     parser.add_argument("--stt-language", help="Gnani STT locale; defaults to GNANI_STT_LANGUAGE.")
     parser.add_argument("--tts-language", help="Gnani TTS locale; defaults to GNANI_TTS_LANGUAGE.")

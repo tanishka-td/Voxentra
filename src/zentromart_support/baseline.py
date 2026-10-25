@@ -40,7 +40,7 @@ def _questions_path() -> Path:
 
 
 def _default_output_path() -> Path:
-    return _project_root() / "outputs" / "step1_baseline.json"
+    return _project_root() / "outputs" / "phase1_baseline" / "step1_baseline.json"
 
 
 def evaluate(model: GeminiTextModel, questions_path: Path, output_path: Path) -> None:
@@ -95,7 +95,7 @@ def evaluate(model: GeminiTextModel, questions_path: Path, output_path: Path) ->
             print(f"Processed {count}: {row['id']}")
 
     print(f"Saved {count} responses to {output_path}")
-    print("Score these responses with `python -m zentromart_support.score_practice outputs/step1_baseline.json`.")
+    print("Score these responses with `python -m zentromart_support.score_practice outputs/phase1_baseline/step1_baseline.json`.")
 
 
 def main() -> None:

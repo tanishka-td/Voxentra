@@ -91,6 +91,11 @@ QUERY_SYNONYMS = {
     "refund": "refund money",
     "refunds": "refund",
     "when": "timeline",
+    "ऑर्डर": "order",
+    "शिप": "ship shipped",
+    "कैंसिल": "cancel cancelled cancellation",
+    "कैंसल": "cancel cancelled cancellation",
+    "रद्द": "cancel cancelled cancellation",
 }
 
 
@@ -162,6 +167,15 @@ AUTHORITY_MULTIPLIER = {
     "product": 1.03,
     "data": 1.02,
     "marketing": 0.98,
+}
+
+DOCUMENT_PRECEDENCE = {
+    "policy": 0,
+    "meta": 1,
+    "agent_guide": 2,
+    "help": 3,
+    "faq": 4,
+    "marketing": 5,
 }
 
 RRF_CONSTANT = 60
@@ -526,6 +540,25 @@ class KnowledgeRetriever:
             selected.append(candidate)
             if len(selected) >= top_k:
                 break
+
+        # Relevance determines which evidence is selected. Within that shortlist,
+        # preserve the knowledge-base precedence order for policy-style documents
+        # so a FAQ or marketing page cannot appear before a conflicting policy.
+        # Product and table evidence stay in their relevance-selected positions.
+        precedence_positions = [
+            position for position, (_, index) in enumerate(selected)
+            if self.evidence[index].doc_type in DOCUMENT_PRECEDENCE
+        ]
+        precedence_items = sorted(
+            (selected[position] for position in precedence_positions),
+            key=lambda candidate: (
+                DOCUMENT_PRECEDENCE[self.evidence[candidate[1]].doc_type],
+                -candidate[0],
+            ),
+        )
+        for position, candidate in zip(precedence_positions, precedence_items):
+            selected[position] = candidate
+
         return [
             Evidence(**{**asdict(self.evidence[index]), "score": round(score, 6)})
             for score, index in selected

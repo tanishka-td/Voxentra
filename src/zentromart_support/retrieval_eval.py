@@ -31,7 +31,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=_root() / "outputs" / "retrieval_eval.json",
+        default=_root() / "outputs" / "phase2_retrieval" / "retrieval_eval.json",
     )
     args = parser.parse_args()
 

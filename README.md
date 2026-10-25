@@ -7,6 +7,14 @@ order tools, and Gnani speech recognition and synthesis.
 The capstone dataset is required locally for development. It is not included in
 this repository or in a submission package.
 
+## Project folders
+
+- `src/zentromart_support/`: application code.
+- `Capstone_Project_Dataset_FTTT_2026/`: local practice dataset; excluded from Git and submission.
+- `local_data/voice_samples/`: local recordings grouped by language or scenario; excluded from Git.
+- `outputs/phase1_baseline/` through `outputs/phase4_voice/`: generated evaluation and voice results, grouped by project phase.
+- `.cache/`: local embedding cache; excluded from Git.
+
 ## Setup
 
 1. Install Python 3.10 or newer.
@@ -30,8 +38,19 @@ this repository or in a submission package.
    `DATASET_DIR` to its location.
 
 The text model defaults to `gemini-3.5-flash-lite`; embeddings default to
-`gemini-embedding-001`. Voice language defaults to `en-IN`. Speech language,
-voice, and model can be configured in `.env`.
+`gemini-embedding-001`. Voice language defaults to `en-IN`. For the demo, the
+target languages are English, Hindi, and Hinglish. Use one language per batch:
+
+| Language | Gnani STT locale | Gnani TTS language |
+| --- | --- | --- |
+| English | `en-IN` | `en-IN` |
+| Hindi | `hi-IN` | `hi-IN` |
+| Hinglish | `en-IN` | `auto` |
+
+The Gnani voice, speech model, and languages can be set in `.env` or with the
+batch command's language options. Hinglish STT uses `en-IN`; for TTS, use
+`auto` so the model can handle the mixed-language reply. The installed Gnani
+SDK rejects `hi-en` as a TTS language code.
 
 ## Run the text agent
 
@@ -66,7 +85,8 @@ python -m zentromart_support.retrieval_eval --top-k 5
 ```
 
 Use `--lexical-only` to skip embedding API calls and evaluate the BM25 fallback.
-Retrieval rankings and cached vectors are written under `outputs/` and `.cache/`.
+Retrieval rankings are written under `outputs/phase2_retrieval/`; cached vectors
+are written under `.cache/`.
 
 Generate grounded answers for the practice questions:
 
@@ -78,7 +98,7 @@ Use `--asr-text` to evaluate the supplied speech-like transcripts. This is text
 evaluation; the dataset does not contain audio recordings. Score a formatted JSON result:
 
 ```powershell
-python -m zentromart_support.score_practice outputs/step2_rag.json --output outputs/step2_rag_score.json
+python -m zentromart_support.score_practice outputs/phase2_rag/step2_rag.json --output outputs/phase2_rag/step2_rag_score.json
 ```
 
 The local scorer is approximate, not the organizers' official scorer. Practice
@@ -92,7 +112,7 @@ files are still accepted by the scorer and resume logic.
 Start an interactive text conversation:
 
 ```powershell
-python -m zentromart_support.conversation_cli --output outputs/local_turns.json
+python -m zentromart_support.conversation_cli --output outputs/phase3_conversations/local_turns.json
 ```
 
 The conversation controller verifies a caller before sharing order facts, allows
@@ -106,7 +126,7 @@ python -m zentromart_support.conversation_eval --lexical-only
 ```
 
 This writes per-turn decisions, tool calls, evidence IDs, and approximate checks to
-`outputs/step3_conversations.json`. It can create synthetic handover tickets in
+`outputs/phase3_conversations/step3_conversations.json`. It can create synthetic handover tickets in
 the dataset's tools folder. Use `--limit 1` for a small run, `--overwrite` to
 replace an existing report, or repeat `--conversation-id` to select specific
 scenarios.
@@ -116,7 +136,7 @@ scenarios.
 Put WAV, MP3, FLAC, OGG, or M4A files in a folder and run:
 
 ```powershell
-python -m zentromart_support.batch_run path/to/audio_folder --output outputs/voice_batch
+python -m zentromart_support.batch_run path/to/audio_folder --output outputs/phase4_voice/voice_batch
 ```
 
 By default, each input file starts a separate, single-turn conversation. The
@@ -131,6 +151,16 @@ To process ordered recordings as voice follow-up turns in one conversation, add
 names such as `01_question.wav`, `02_followup.wav`, and `03_verification.wav`.
 This shares order and verification context only for that batch; separate batch
 runs remain separate conversations.
+
+Select a language for a batch with `--stt-language` and `--tts-language`:
+
+```powershell
+python -m zentromart_support.batch_run local_data/voice_samples/hindi --output outputs/phase4_voice/hindi --stt-language hi-IN --tts-language hi-IN
+python -m zentromart_support.batch_run local_data/voice_samples/hinglish --output outputs/phase4_voice/hinglish --stt-language en-IN --tts-language auto
+```
+
+For a mixed-language folder, run separate batches by language. The current
+runner applies one STT/TTS language pair to every file in a single invocation.
 
 ## Validate the dataset
 

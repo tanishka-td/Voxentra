@@ -9,10 +9,10 @@ venv/
 .cache/
 Capstone_Project_Dataset_FTTT_2026/tools/tickets_created.csv
 /outputs/
-/Voice_samples/
-/Voice_samples_express/
-/voice_samples/
-/voice_samples_express/
+/local_data/
+/Voice_samples*/
+/voice_samples*/
+/voice_followup/
 *.egg-info/
 build/
 dist/
