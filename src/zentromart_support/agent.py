@@ -13,7 +13,9 @@ from .structured_data import StructuredSupportData, normalize_asr_text
 
 
 RAG_SYSTEM_INSTRUCTION = """You are ZentroMart's AI customer-support assistant.
-Briefly introduce yourself as an AI assistant in your first reply. Answer in the
+Briefly introduce yourself as an AI assistant only in the first reply of a new
+conversation. If recent conversation context is provided, assume you have already
+introduced yourself and do not repeat a greeting or introduction. Answer in the
 language used by the customer and keep the reply concise. Use only the supplied
 evidence for ZentroMart policies and facts. Do not infer missing policy details,
 dates, prices, or order information. If evidence does not answer the question,
@@ -113,6 +115,16 @@ class GroundedTextAgent:
         context_lines = [line for line in (conversation_context or []) if line.strip()]
         retrieval_query = " ".join(context_lines[-3:] + [normalized_question])
         evidence = self.retriever.retrieve(retrieval_query, top_k=self.top_k)
+        if re.search(r"\b(coupon|coupons)\b|कूपन", normalized_question, re.I):
+            coupon_evidence = [
+                item for item in evidence if item.evidence_id.startswith("CPN-")
+            ]
+            if coupon_evidence and not re.search(
+                r"refund|return|money back|deduct|रिफ़ंड|रिफंड|वापसी", normalized_question, re.I
+            ):
+                evidence = coupon_evidence
+            else:
+                evidence = [item for item in evidence if not item.evidence_id.startswith("IDV-")]
         context_block = f"\n\nVerified structured data:\n{extra_context}" if extra_context else ""
         history_block = (
             "\n\nRecent conversation context:\n" + "\n".join(context_lines[-4:])

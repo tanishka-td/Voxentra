@@ -33,14 +33,22 @@ def main() -> None:
     parser.add_argument("--dataset", type=Path, default=Path(os.getenv("DATASET_DIR", root / "Capstone_Project_Dataset_FTTT_2026")))
     parser.add_argument("--stt-language", help="Gnani STT locale; defaults to GNANI_STT_LANGUAGE.")
     parser.add_argument("--tts-language", help="Gnani TTS locale; defaults to GNANI_TTS_LANGUAGE.")
+    parser.add_argument(
+        "--single-conversation",
+        action="store_true",
+        help="Treat audio files in filename order as turns in one conversation.",
+    )
     args = parser.parse_args()
 
     audio_folder = args.audio_folder.resolve()
     if not audio_folder.is_dir():
         parser.error(f"Audio folder does not exist: {audio_folder}")
     audio_files = sorted(
-        path for path in audio_folder.iterdir()
-        if path.is_file() and path.suffix.casefold() in SUPPORTED_AUDIO_SUFFIXES
+        (
+            path for path in audio_folder.iterdir()
+            if path.is_file() and path.suffix.casefold() in SUPPORTED_AUDIO_SUFFIXES
+        ),
+        key=lambda path: path.name.casefold(),
     )
     if not audio_files:
         parser.error(f"No supported audio files found in {audio_folder}")
@@ -55,9 +63,19 @@ def main() -> None:
 
     output_dir = args.output.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    failed_files = 0
+    shared_conversation_id = f"audio-{audio_folder.name}-{uuid.uuid4().hex[:6]}"
+    shared_state = (
+        ConversationState(conversation_id=shared_conversation_id)
+        if args.single_conversation else None
+    )
     for audio_path in audio_files:
-        conversation_id = f"audio-{audio_path.stem}-{uuid.uuid4().hex[:6]}"
-        state = ConversationState(conversation_id=conversation_id)
+        if shared_state is not None:
+            conversation_id = shared_conversation_id
+            state = shared_state
+        else:
+            conversation_id = f"audio-{audio_path.stem}-{uuid.uuid4().hex[:6]}"
+            state = ConversationState(conversation_id=conversation_id)
         base = output_dir / audio_path.stem
         audio_output = output_dir / f"{audio_path.stem}.wav"
         text_output = output_dir / f"{audio_path.stem}.txt"
@@ -78,6 +96,7 @@ def main() -> None:
             })
             print(f"Processed {audio_path.name}")
         except Exception as exc:
+            failed_files += 1
             record["error"] = type(exc).__name__
             print(f"Failed {audio_path.name}: {type(exc).__name__}: {exc}", file=sys.stderr)
             traceback.print_exc()
@@ -85,7 +104,13 @@ def main() -> None:
             json.dump(record, target, ensure_ascii=False, indent=2)
             target.write("\n")
 
-    print(f"Saved text, audio, and evidence records under {output_dir}")
+    succeeded_files = len(audio_files) - failed_files
+    print(
+        f"Batch complete: {succeeded_files}/{len(audio_files)} files processed; "
+        f"records saved under {output_dir}"
+    )
+    if failed_files:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

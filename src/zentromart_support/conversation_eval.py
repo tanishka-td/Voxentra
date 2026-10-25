@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import os
 import re
 import sys
@@ -15,6 +14,7 @@ from pathlib import Path
 from .agent import GroundedTextAgent
 from .capstone_tools import CapstoneToolGateway
 from .conversation import ConversationAgent, ConversationState, _redact_proofs
+from .json_records import write_records
 from .retrieval import KnowledgeRetriever
 
 
@@ -38,7 +38,7 @@ def _contains_any(text: str, alternatives: list[str]) -> bool:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", type=Path, default=Path(os.getenv("DATASET_DIR", _root() / "Capstone_Project_Dataset_FTTT_2026")))
-    parser.add_argument("--output", type=Path, default=_root() / "outputs" / "step3_conversations.jsonl")
+    parser.add_argument("--output", type=Path, default=_root() / "outputs" / "step3_conversations.json")
     parser.add_argument("--limit", type=int, help="Optional maximum number of conversations to run.")
     parser.add_argument("--conversation-id", action="append", help="Run one selected conversation ID; may be repeated.")
     parser.add_argument("--lexical-only", action="store_true", help="Skip Gemini embeddings and use lexical retrieval.")
@@ -78,59 +78,61 @@ def main() -> None:
     turn_count = 0
     turn_passes = 0
     conversation_passes = 0
-    with args.output.open("w", encoding="utf-8") as target:
-        for conversation_id in conversation_ids:
-            state = ConversationState(conversation_id=conversation_id)
-            turns_ok = True
-            for row in sorted(groups[conversation_id], key=lambda item: int(item["turn"])):
-                result = agent.respond(state, row["customer_message"])
-                expected_decisions = {part.strip() for part in row["expected_decision"].split(";") if part.strip()}
-                required = _requirement_groups(row["must_include"])
-                forbidden = _requirement_groups(row["must_not_include"])
-                actual_tool_names = {str(call.get("tool", "")) for call in result.tool_calls}
-                expected_tool_names = set(re.findall(r"[a-z_]+(?=\()", row["expected_tool_calls"]))
-                decision_ok = not expected_decisions or result.decision in expected_decisions
-                required_ok = not required or all(
-                    _contains_any(result.reply, group) for group in required
-                )
-                forbidden_ok = not forbidden or not any(
-                    _contains_any(result.reply, group) for group in forbidden
-                )
-                tools_ok = expected_tool_names.issubset(actual_tool_names)
-                evidence_ids = [item.get("evidence_id", "") for item in result.evidence]
-                gold_ids = [item.strip() for item in row["gold_evidence"].split(";") if item.strip()]
-                evidence_ok = not gold_ids or all(
-                    any(gold in evidence_id for evidence_id in evidence_ids) for gold in gold_ids
-                )
-                passed = decision_ok and required_ok and forbidden_ok and tools_ok and evidence_ok
-                turn_count += 1
-                turn_passes += int(passed)
-                turns_ok = turns_ok and passed
-                record = {
-                    "conversation_id": conversation_id,
-                    "turn": int(row["turn"]),
-                    "scenario": row["scenario"],
-                    "customer_message": _redact_proofs(row["customer_message"]),
-                    "reply": result.reply,
-                    "decision": result.decision,
-                    "expected_decision": sorted(expected_decisions),
-                    "checks": {
-                        "decision": decision_ok,
-                        "must_include": required_ok,
-                        "must_not_include": forbidden_ok,
-                        "tool_calls": tools_ok,
-                        "evidence": evidence_ok,
-                    },
-                    "passed": passed,
-                    "tool_calls": result.tool_calls,
-                    "evidence_ids": evidence_ids,
-                    "model": agent.text_agent.model.model_name,
-                    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-                }
-                target.write(json.dumps(record, ensure_ascii=False) + "\n")
-                target.flush()
-                print(f"Processed {conversation_id} turn {row['turn']}: {'pass' if passed else 'review'}")
-            conversation_passes += int(turns_ok)
+    records = []
+    for conversation_id in conversation_ids:
+        state = ConversationState(conversation_id=conversation_id)
+        turns_ok = True
+        for row in sorted(groups[conversation_id], key=lambda item: int(item["turn"])):
+            result = agent.respond(state, row["customer_message"])
+            expected_decisions = {
+                part.strip() for part in row["expected_decision"].split(";") if part.strip()
+            }
+            required = _requirement_groups(row["must_include"])
+            forbidden = _requirement_groups(row["must_not_include"])
+            actual_tool_names = {str(call.get("tool", "")) for call in result.tool_calls}
+            expected_tool_names = set(re.findall(r"[a-z_]+(?=\()", row["expected_tool_calls"]))
+            decision_ok = not expected_decisions or result.decision in expected_decisions
+            required_ok = not required or all(
+                _contains_any(result.reply, group) for group in required
+            )
+            forbidden_ok = not forbidden or not any(
+                _contains_any(result.reply, group) for group in forbidden
+            )
+            tools_ok = expected_tool_names.issubset(actual_tool_names)
+            evidence_ids = [item.get("evidence_id", "") for item in result.evidence]
+            gold_ids = [item.strip() for item in row["gold_evidence"].split(";") if item.strip()]
+            evidence_ok = not gold_ids or all(
+                any(gold in evidence_id for evidence_id in evidence_ids) for gold in gold_ids
+            )
+            passed = decision_ok and required_ok and forbidden_ok and tools_ok and evidence_ok
+            turn_count += 1
+            turn_passes += int(passed)
+            turns_ok = turns_ok and passed
+            record = {
+                "conversation_id": conversation_id,
+                "turn": int(row["turn"]),
+                "scenario": row["scenario"],
+                "customer_message": _redact_proofs(row["customer_message"]),
+                "reply": result.reply,
+                "decision": result.decision,
+                "expected_decision": sorted(expected_decisions),
+                "checks": {
+                    "decision": decision_ok,
+                    "must_include": required_ok,
+                    "must_not_include": forbidden_ok,
+                    "tool_calls": tools_ok,
+                    "evidence": evidence_ok,
+                },
+                "passed": passed,
+                "tool_calls": result.tool_calls,
+                "evidence_ids": evidence_ids,
+                "model": agent.text_agent.model.model_name,
+                "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+            }
+            records.append(record)
+            write_records(args.output, records)
+            print(f"Processed {conversation_id} turn {row['turn']}: {'pass' if passed else 'review'}")
+        conversation_passes += int(turns_ok)
 
     turn_rate = 100 * turn_passes / turn_count if turn_count else 0.0
     conversation_rate = 100 * conversation_passes / len(conversation_ids) if conversation_ids else 0.0

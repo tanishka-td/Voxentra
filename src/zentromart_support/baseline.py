@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import os
 import sys
 import time
@@ -12,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .gemini import GeminiTextModel
+from .json_records import write_records
 
 SYSTEM_INSTRUCTION = """You are ZentroMart's customer-support assistant. In your first reply,
 briefly introduce yourself as an AI assistant. Be polite, concise, and reply in the
@@ -40,7 +40,7 @@ def _questions_path() -> Path:
 
 
 def _default_output_path() -> Path:
-    return _project_root() / "outputs" / "step1_baseline.jsonl"
+    return _project_root() / "outputs" / "step1_baseline.json"
 
 
 def evaluate(model: GeminiTextModel, questions_path: Path, output_path: Path) -> None:
@@ -49,9 +49,8 @@ def evaluate(model: GeminiTextModel, questions_path: Path, output_path: Path) ->
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     count = 0
-    with questions_path.open(encoding="utf-8-sig", newline="") as source, output_path.open(
-        "w", encoding="utf-8", newline=""
-    ) as target:
+    records = []
+    with questions_path.open(encoding="utf-8-sig", newline="") as source:
         for row in csv.DictReader(source):
             started = time.perf_counter()
             try:
@@ -90,12 +89,13 @@ def evaluate(model: GeminiTextModel, questions_path: Path, output_path: Path) ->
                     "error": type(exc).__name__,
                     "model": model.model_name,
                 }
-            target.write(json.dumps(record, ensure_ascii=False) + "\n")
+            records.append(record)
+            write_records(output_path, records)
             count += 1
             print(f"Processed {count}: {row['id']}")
 
     print(f"Saved {count} responses to {output_path}")
-    print("Score these responses with `python -m zentromart_support.score_practice outputs/step1_baseline.jsonl`.")
+    print("Score these responses with `python -m zentromart_support.score_practice outputs/step1_baseline.json`.")
 
 
 def main() -> None:
@@ -103,7 +103,7 @@ def main() -> None:
     parser.add_argument(
         "--evaluate",
         action="store_true",
-        help="Run all practice questions and save responses as JSONL.",
+        help="Run all practice questions and save responses as formatted JSON.",
     )
     parser.add_argument("--questions", type=Path, default=_questions_path())
     parser.add_argument("--output", type=Path, default=_default_output_path())

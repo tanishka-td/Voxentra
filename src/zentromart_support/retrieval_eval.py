@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import argparse
 import csv
-import json
 import os
 from pathlib import Path
 
+from .json_records import write_records
 from .retrieval import KnowledgeRetriever
 
 
@@ -31,7 +31,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=_root() / "outputs" / "retrieval_eval.jsonl",
+        default=_root() / "outputs" / "retrieval_eval.json",
     )
     args = parser.parse_args()
 
@@ -47,36 +47,36 @@ def main() -> None:
     reciprocal_ranks: list[float] = []
     evidence_recall: list[float] = []
     misses: list[str] = []
+    records = []
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("w", encoding="utf-8", newline="") as target:
-        for row in rows:
-            gold = {part.strip() for part in row["gold_evidence"].split(";") if part.strip()}
-            results = retriever.retrieve(row["question"], top_k=args.top_k)
-            ranked_ids = [item.evidence_id for item in results]
-            found = gold.intersection(ranked_ids)
-            total_questions += 1
-            if gold:
-                evaluated += 1
-                if found:
-                    hit_count += 1
-                    first_rank = min(ranked_ids.index(item) + 1 for item in found)
-                    reciprocal_ranks.append(1 / first_rank)
-                else:
-                    reciprocal_ranks.append(0.0)
-                    misses.append(row["id"])
-                evidence_recall.append(len(found) / len(gold))
-            record = {
-                "id": row["id"],
-                "question": row["question"],
-                "answerable": row.get("answerable") == "True",
-                "gold_evidence": sorted(gold),
-                "retrieved_evidence": [item.to_dict() for item in results],
-                "retrieval_mode": retriever.mode,
-                "hit_at_k": bool(found) if gold else None,
-                "evidence_recall_at_k": len(found) / len(gold) if gold else None,
-            }
-            target.write(json.dumps(record, ensure_ascii=False) + "\n")
+    for row in rows:
+        gold = {part.strip() for part in row["gold_evidence"].split(";") if part.strip()}
+        results = retriever.retrieve(row["question"], top_k=args.top_k)
+        ranked_ids = [item.evidence_id for item in results]
+        found = gold.intersection(ranked_ids)
+        total_questions += 1
+        if gold:
+            evaluated += 1
+            if found:
+                hit_count += 1
+                first_rank = min(ranked_ids.index(item) + 1 for item in found)
+                reciprocal_ranks.append(1 / first_rank)
+            else:
+                reciprocal_ranks.append(0.0)
+                misses.append(row["id"])
+            evidence_recall.append(len(found) / len(gold))
+        records.append({
+            "id": row["id"],
+            "question": row["question"],
+            "answerable": row.get("answerable") == "True",
+            "gold_evidence": sorted(gold),
+            "retrieved_evidence": [item.to_dict() for item in results],
+            "retrieval_mode": retriever.mode,
+            "hit_at_k": bool(found) if gold else None,
+            "evidence_recall_at_k": len(found) / len(gold) if gold else None,
+        })
+
+    write_records(args.output, records)
 
     print(f"Retrieval mode: {retriever.mode}")
     if retriever.embedding_error:

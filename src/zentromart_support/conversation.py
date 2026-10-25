@@ -33,6 +33,11 @@ FRAUD_RE = re.compile(r"\b(never ordered|never placed|did not order|didn't order
 LEGAL_RE = re.compile(r"\b(legal action|consumer court|police complaint|police)\b", re.I)
 SAFETY_RE = re.compile(r"\b(swelling battery|swollen battery|burning smell|sparks?|smoke|caught fire|injury|electric shock)\b", re.I)
 DAMAGE_RE = re.compile(r"\b(damaged|damage|cracked|crack|broken|defective|wrong item|missing item|torn|expired)\b", re.I)
+TOPIC_SWITCH_RE = re.compile(
+    r"\b(different question|another question|new question|switching topics|something else)\b|"
+    r"ek aur sawaal|alag sawaal|naya sawaal|एक और सवाल|अलग सवाल|नया सवाल",
+    re.I,
+)
 
 ORDER_FIELDS = (
     "order_id", "status", "placed_at", "payment_method", "delivery_type",
@@ -110,6 +115,7 @@ def _business_day_add(start: date, days: int, holidays: set[date]) -> date:
 @dataclass
 class ConversationState:
     conversation_id: str
+    language: str = "en"
     order_id: str | None = None
     verified_order: dict[str, Any] | None = None
     verification_attempts: int = 0
@@ -162,6 +168,15 @@ class ConversationAgent:
         }
         return [by_id[section_id].to_dict() for section_id in section_ids if section_id in by_id]
 
+    @staticmethod
+    def _localized(
+        state: ConversationState,
+        english: str,
+        hindi: str,
+        hinglish: str,
+    ) -> str:
+        return {"hi": hindi, "hi-en": hinglish}.get(state.language, english)
+
     def _greet_turn(self, state: ConversationState, result: TurnResult) -> TurnResult:
         first_reply = not state.greeted
         result.reply = self._greet(state, result.reply)
@@ -173,14 +188,32 @@ class ConversationAgent:
             )
         return result
 
-    @staticmethod
-    def _greet(state: ConversationState, reply: str) -> str:
+    def _greet(self, state: ConversationState, reply: str) -> str:
+        without_intro = re.sub(
+            r"^\s*(?:"
+            r"(?:(?:hi|hello|hey)[!,.]?\s*)?"
+            r"(?:i am|i['’]m)\s+(?:zentromart['’]s\s+)?"
+            r"(?:ai\s+)?(?:support\s+)?assistant\b"
+            r"|(?:namaste|namaskar)[!,.]?\s+main\s+zentromart\s+ka\s+"
+            r"(?:ai\s+)?(?:support\s+)?assistant\s+hoon\b"
+            r"|(?:नमस्ते|नमस्कार)[!,.।]?\s*(?:मैं\s+)?zentromart\s+का\s+"
+            r"(?:ai\s+)?(?:सहायक|सपोर्ट सहायक)\s+हूँ"
+            r")[!.,:;।\s-]*",
+            "",
+            reply,
+            count=1,
+            flags=re.I,
+        ).lstrip()
+        body = without_intro or reply
         if state.greeted:
-            return reply
+            return body
         state.greeted = True
-        if re.search(r"\bAI support assistant\b|\bAI assistant\b", reply[:180], re.I):
-            return reply
-        return f"Hi, I'm ZentroMart's AI support assistant. {reply}"
+        introductions = {
+            "hi": "नमस्ते, मैं ZentroMart का AI सहायक हूँ।",
+            "hi-en": "Namaste, main ZentroMart ka AI assistant hoon.",
+            "en": "Hi, I'm ZentroMart's AI support assistant.",
+        }
+        return f"{introductions.get(state.language, introductions['en'])} {body}"
 
     def _ticket(
         self,
@@ -214,10 +247,21 @@ class ConversationAgent:
         else:
             evidence = self._evidence_records("ESC-1", "ESC-4")
         if outcome.get("created"):
-            confirmation = "I’ve sent this to a human colleague for review. They’ll follow up through support."
+            confirmation = self._localized(
+                state,
+                "I’ve sent this to a human colleague for review. They’ll follow up through support.",
+                "मैंने इसे समीक्षा के लिए सहायता टीम को भेज दिया है। वे सहायता चैनल के ज़रिए आपसे संपर्क करेंगे।",
+                "Maine ise review ke liye human support team ko bhej diya hai. Woh support ke zariye aapse follow up karenge.",
+            )
             ticket_id = outcome.get("ticket_id")
             if ticket_id:
-                confirmation += f" Your ticket reference is {ticket_id}."
+                ticket_line = self._localized(
+                    state,
+                    f" Your ticket reference is {ticket_id}.",
+                    f" आपका टिकट (ticket) रेफ़रेंस {ticket_id} है।",
+                    f" Aapka ticket reference {ticket_id} hai.",
+                )
+                confirmation += ticket_line
             if reason == "refund_more_than_three_business_days_past_maximum":
                 rrn = next((
                     state.verified_order.get(key)
@@ -225,7 +269,13 @@ class ConversationAgent:
                     if state.verified_order and state.verified_order.get(key)
                 ), None)
                 if rrn:
-                    confirmation += f" Your refund reference number (RRN) is {rrn}."
+                    rrn_line = self._localized(
+                        state,
+                        f" Your refund reference number (RRN) is {rrn}.",
+                        f" आपके रिफ़ंड का रेफ़रेंस नंबर (RRN) {rrn} है।",
+                        f" Aapke refund ka reference number (RRN) {rrn} hai.",
+                    )
+                    confirmation += rrn_line
             return TurnResult(
                 reply=confirmation,
                 decision="escalate",
@@ -233,7 +283,12 @@ class ConversationAgent:
                 tool_calls=[call],
             )
         return TurnResult(
-            reply="I couldn’t open a handover just now. Please contact ZentroMart support directly for help.",
+            reply=self._localized(
+                state,
+                "I couldn’t open a handover just now. Please contact ZentroMart support directly for help.",
+                "अभी सहायता अनुरोध दर्ज नहीं हो पाया। कृपया मदद के लिए सीधे ZentroMart सहायता टीम से संपर्क करें।",
+                "Abhi support request create nahi ho saki. Madad ke liye ZentroMart support se seedha sampark karein.",
+            ),
             decision="escalate",
             evidence=evidence,
             tool_calls=[call],
@@ -300,6 +355,13 @@ class ConversationAgent:
         if not message:
             return TurnResult("Sorry, I didn’t catch that. Could you say that again?", "clarify")
 
+        state.language = self.text_agent.structured_data._language(message)
+        topic_switch = bool(TOPIC_SWITCH_RE.search(message)) and not bool(
+            ORDER_HELP_RE.search(message) or ORDER_FOLLOWUP_RE.search(message)
+        )
+        if topic_switch:
+            state.recent_context.clear()
+
         if not re.search(r"last four|digits|pincode|pin code|registered phone|आख़िरी चार|आखिरी चार", message, re.I):
             state.recent_context.append(_redact_proofs(message))
             state.recent_context = state.recent_context[-4:]
@@ -333,7 +395,12 @@ class ConversationAgent:
             state.awaiting_verification = True
             state.verification_locked = False
             self.tools.lookup_order(found_order_id)
-            reply = "For your privacy, please share either the last four digits of your registered phone number or the delivery pincode for this order."
+            reply = self._localized(
+                state,
+                "For your privacy, please share either the last four digits of your registered phone number or the delivery pincode for this order.",
+                "आपकी गोपनीयता के लिए, कृपया इस ऑर्डर के रजिस्टर्ड फ़ोन नंबर के आख़िरी 4 अंक या डिलीवरी पिनकोड बताइए।",
+                "Aapki privacy ke liye, is order ke registered phone ke last 4 digits ya delivery pincode bataiye.",
+            )
             result = TurnResult(reply, "clarify", evidence=self._evidence_records("IDV-2"), tool_calls=[
                 {"tool": "lookup_order", "status": "verification_required", "order_id": found_order_id}
             ])
@@ -356,7 +423,12 @@ class ConversationAgent:
                 )
                 return self._greet_turn(state, result)
             if not state.awaiting_verification or proof is None:
-                reply = "Please provide the last four digits of your registered phone number or the delivery pincode for the order."
+                reply = self._localized(
+                    state,
+                    "Please provide the last four digits of your registered phone number or the delivery pincode for the order.",
+                    "कृपया रजिस्टर्ड फ़ोन नंबर के आख़िरी 4 अंक या ऑर्डर का डिलीवरी पिनकोड बताइए।",
+                    "Registered phone ke last 4 digits ya order ka delivery pincode bataiye.",
+                )
                 return self._greet_turn(state, TurnResult(reply, "clarify", evidence=self._evidence_records("IDV-2")))
             state.verification_attempts += 1
             outcome = self.tools.lookup_order(state.order_id, verification_value=proof)
@@ -380,17 +452,32 @@ class ConversationAgent:
                             if item.get("evidence_id") not in known
                         )
                         return result
-                    reply = "Thanks, I’ve verified the order. What would you like help with?"
+                    reply = self._localized(
+                        state,
+                        "Thanks, I’ve verified the order. What would you like help with?",
+                        "धन्यवाद, आपका ऑर्डर सत्यापित हो गया है। अब बताइए, मैं किस चीज़ में मदद करूँ?",
+                        "Thanks, aapka order verify ho gaya hai. Bataiye, main kis cheez mein madad karun?",
+                    )
                     return self._greet_turn(state, TurnResult(reply, "answer", evidence=self._evidence_records("IDV-2"), tool_calls=[call]))
                 return self._answer_with_order(state, substantive_query, [call])
             if state.verification_attempts < 2:
-                reply = "Those details didn’t match. Please try again once with the registered phone’s last four digits or the delivery pincode."
+                reply = self._localized(
+                    state,
+                    "Those details didn’t match. Please try again once with the registered phone’s last four digits or the delivery pincode.",
+                    "ये जानकारी मेल नहीं खाई। कृपया एक बार फिर रजिस्टर्ड फ़ोन के आख़िरी 4 अंक या डिलीवरी पिनकोड बताइए।",
+                    "Yeh details match nahi hui. Registered phone ke last 4 digits ya delivery pincode ke saath ek baar phir koshish karein.",
+                )
                 return self._greet_turn(state, TurnResult(reply, "clarify", evidence=self._evidence_records("IDV-3"), tool_calls=[
                     {"tool": "lookup_order", "status": "verification_failed", "order_id": state.order_id}
                 ]))
             state.awaiting_verification = False
             state.verification_locked = True
-            reply = "I’m unable to verify this order, so I can’t share its details. Please contact support from the registered phone number; I can still answer general policy questions."
+            reply = self._localized(
+                state,
+                "I’m unable to verify this order, so I can’t share its details. Please contact support from the registered phone number; I can still answer general policy questions.",
+                "मैं इस ऑर्डर को सत्यापित नहीं कर पा रहा हूँ, इसलिए इसकी जानकारी साझा नहीं कर सकता। कृपया रजिस्टर्ड फ़ोन नंबर से सहायता टीम से संपर्क करें; मैं सामान्य नीतियों के सवालों में मदद कर सकता हूँ।",
+                "Main is order ko verify nahi kar pa raha, isliye details share nahi kar sakta. Registered phone se support ko contact karein; main general policy questions mein madad kar sakta hoon.",
+            )
             return self._greet_turn(state, TurnResult(reply, "refuse", evidence=self._evidence_records("IDV-3"), tool_calls=[
                 {"tool": "lookup_order", "status": "verification_failed", "order_id": state.order_id}
             ]))
@@ -402,10 +489,15 @@ class ConversationAgent:
                 or re.search(r"\b(my|this|that)\s+(order|refund|delivery|shipment)\b", message, re.I)
             )
             if personal_order_request or (state.verification_locked and _extract_proof(message)):
-                reply = "I’m unable to verify this order, so I can’t share its details. Please contact support from the registered phone number."
+                reply = self._localized(
+                    state,
+                    "I’m unable to verify this order, so I can’t share its details. Please contact support from the registered phone number.",
+                    "मैं इस ऑर्डर को सत्यापित नहीं कर पा रहा हूँ, इसलिए इसकी जानकारी साझा नहीं कर सकता। कृपया रजिस्टर्ड फ़ोन नंबर से सहायता टीम से संपर्क करें।",
+                    "Main is order ko verify nahi kar pa raha, isliye details share nahi kar sakta. Registered phone se support ko contact karein.",
+                )
                 return TurnResult(reply, "refuse")
 
-        if state.verified_order:
+        if state.verified_order and not topic_switch:
             order = state.verified_order
             if int(order.get("contacts_last_7_days") or 0) >= 2:
                 return self._ticket(
@@ -438,7 +530,9 @@ class ConversationAgent:
                         intent="damaged_item",
                         checks="Caller verified; order item price exceeds ₹10,000.",
                     )
-        return self._answer_with_order(state, message, []) if state.verified_order else self._answer_or_clarify(state, message)
+        if state.verified_order and not topic_switch:
+            return self._answer_with_order(state, message, [])
+        return self._answer_or_clarify(state, message)
 
     def _answer_with_order(
         self,
@@ -543,7 +637,19 @@ class ConversationAgent:
                     evidence = self._evidence_records(*evidence_ids)
                     reply = structured.reply
                     if order.get("is_plus"):
-                        reply += " For Plus members, the refund is initiated at pickup."
+                        reply += self._localized(
+                            state,
+                            " For Plus members, the refund is initiated at pickup.",
+                            " Plus सदस्य के लिए रिफ़ंड पिकअप के समय शुरू होता है।",
+                            " Plus members ke liye refund pickup ke time initiate hota hai.",
+                        )
+                    elif not any(order.get(f"{prefix}_refund_initiated_on") for prefix in ("return", "cancellation", "rto")):
+                        reply += self._localized(
+                            state,
+                            " For a return, the refund is initiated within 2 business days of pickup once it passes the warehouse quality check.",
+                            " रिटर्न में, वेयरहाउस गुणवत्ता जाँच पास होने के बाद पिकअप से 2 कार्यदिवस के भीतर रिफ़ंड शुरू होता है।",
+                            " Return mein, warehouse QC pass hone ke baad pickup se 2 business days ke andar refund initiate hota hai.",
+                        )
                     return TurnResult(reply, structured.decision, evidence, calls)
 
         if any(term in normalized for term in ("return", "send back", "वापस", "लौट")):
@@ -575,7 +681,12 @@ class ConversationAgent:
 
     def _answer_or_clarify(self, state: ConversationState, message: str) -> TurnResult:
         if ORDER_HELP_RE.search(message) and not _extract_order_id(message):
-            reply = "I can help with that. What’s the order ID?"
+            reply = self._localized(
+                state,
+                "I can help with that. What’s the order ID?",
+                "मैं आपकी मदद कर सकता हूँ। कृपया ऑर्डर ID बताइए।",
+                "Main madad kar sakta hoon. Order ID bata dijiye.",
+            )
             return self._greet_turn(state, TurnResult(reply, "clarify"))
         result = self.text_agent.respond(message, conversation_context=state.recent_context)
         return self._greet_turn(state, TurnResult(

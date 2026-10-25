@@ -9,6 +9,8 @@ import unicodedata
 from pathlib import Path
 from typing import Any
 
+from .json_records import read_records
+
 
 NUMBER_WORDS = {
     "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
@@ -145,11 +147,11 @@ def score_record(record: dict[str, Any]) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("results", type=Path, help="JSONL from baseline or question_eval.")
+    parser.add_argument("results", type=Path, help="Formatted JSON results (legacy JSONL is also accepted).")
     parser.add_argument("--output", type=Path, help="Optional JSON report path.")
     args = parser.parse_args()
 
-    records = [json.loads(line) for line in args.results.read_text(encoding="utf-8").splitlines() if line.strip()]
+    records = read_records(args.results)
     scores = [score_record(record) for record in records if "error" not in record]
     decision_scores = [item["decision_correct"] for item in scores if item["decision_correct"] is not None]
     evidence_scores = [item["evidence_hit"] for item in scores if item["evidence_hit"] is not None]

@@ -75,23 +75,24 @@ python -m zentromart_support.question_eval
 ```
 
 Use `--asr-text` to evaluate the supplied speech-like transcripts. This is text
-evaluation; the dataset does not contain audio recordings. Score a JSONL result:
+evaluation; the dataset does not contain audio recordings. Score a formatted JSON result:
 
 ```powershell
-python -m zentromart_support.score_practice outputs/step2_rag.jsonl --output outputs/step2_rag_score.json
+python -m zentromart_support.score_practice outputs/step2_rag.json --output outputs/step2_rag_score.json
 ```
 
 The local scorer is approximate, not the organizers' official scorer. Practice
 answer generation uses Gemini requests and may be interrupted by API quotas; the
 runner can resume from valid responses already in the output file. Use
-`--overwrite` to regenerate a result after changing the agent.
+`--overwrite` to regenerate a result after changing the agent. Legacy JSONL input
+files are still accepted by the scorer and resume logic.
 
 ## Run multi-turn conversations
 
 Start an interactive text conversation:
 
 ```powershell
-python -m zentromart_support.conversation_cli --output outputs/local_turns.jsonl
+python -m zentromart_support.conversation_cli --output outputs/local_turns.json
 ```
 
 The conversation controller verifies a caller before sharing order facts, allows
@@ -105,7 +106,7 @@ python -m zentromart_support.conversation_eval --lexical-only
 ```
 
 This writes per-turn decisions, tool calls, evidence IDs, and approximate checks to
-`outputs/step3_conversations.jsonl`. It can create synthetic handover tickets in
+`outputs/step3_conversations.json`. It can create synthetic handover tickets in
 the dataset's tools folder. Use `--limit 1` for a small run, `--overwrite` to
 replace an existing report, or repeat `--conversation-id` to select specific
 scenarios.
@@ -118,11 +119,18 @@ Put WAV, MP3, FLAC, OGG, or M4A files in a folder and run:
 python -m zentromart_support.batch_run path/to/audio_folder --output outputs/voice_batch
 ```
 
-Each input file starts a separate, single-turn conversation. The interactive
-conversation interface accepts text follow-up turns. The batch runner saves a
-transcript, reply text, evidence record, and reply audio for each file. Gnani is
-the only configured speech provider. A 16 kHz, mono, 16-bit PCM WAV works without
-conversion; other input audio requires `ffmpeg` to convert it for Gnani STT.
+By default, each input file starts a separate, single-turn conversation. The
+interactive conversation interface accepts text follow-up turns. The batch
+runner saves a transcript, reply text, evidence record, and reply audio for each
+file. Gnani is the only configured speech provider. A 16 kHz, mono, 16-bit PCM
+WAV works without conversion; other input audio requires `ffmpeg` to convert it
+for Gnani STT.
+
+To process ordered recordings as voice follow-up turns in one conversation, add
+`--single-conversation`. Files are processed alphabetically by filename, so use
+names such as `01_question.wav`, `02_followup.wav`, and `03_verification.wav`.
+This shares order and verification context only for that batch; separate batch
+runs remain separate conversations.
 
 ## Validate the dataset
 
