@@ -60,7 +60,12 @@ def _ascii_digits(value: str) -> str:
 
 
 def _normalize(value: str) -> str:
-    return " ".join(re.findall(r"[\w]+", unicodedata.normalize("NFKC", value).casefold()))
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    tokens = "".join(
+        char if char.isalnum() or unicodedata.category(char).startswith("M") else " "
+        for char in normalized
+    )
+    return " ".join(tokens.split())
 
 
 def _parse_dates(text: str) -> list[date]:
@@ -292,24 +297,33 @@ class StructuredSupportData:
             evidence.append("RET-3")
 
         delivery_dates = _parse_dates(question) if "deliver" in normalized or "डिलीवर" in normalized else []
-        placed_dates = _parse_dates(question) if any(term in normalized for term in ("sale", "bought", "ordered", "order kiya", "खरीदा", "ऑर्डर किया")) else []
+        placed_text = question
+        place_marker = re.search(r"\b(?:ordered|bought|sale|order kiya)\b|खरीदा|ऑर्डर किया", question, re.I)
+        if place_marker:
+            placed_text = question[place_marker.end():]
+        placed_dates = _parse_dates(placed_text) if place_marker or any(term in normalized for term in ("sale", "bought", "ordered", "order kiya", "खरीदा", "ऑर्डर किया")) else []
+        eligibility_query = any(term in normalized for term in ("still eligible", "can i return", "can return it", "return it now", "eligible for return")) or bool(
+            re.search(r"(?:अब भी|अभी भी).*(?:वापस|लौट)|(?:वापस|लौट).*(?:कर सकती|कर सकता|करूं|करूँ|योग्य)|return kar sak(?:ti|ta|te)", normalized)
+        )
         if category == "fashion" and placed_dates:
             placed = placed_dates[-1]
             if date(2026, 10, 1) <= placed <= date(2026, 10, 15):
                 evidence.append("RET-8")
-                return StructuredAnswer(self._greet(question, "This fashion item has a 30-day return window from delivery because the order was placed during the festive sale."), tuple(evidence))
+                delivery_dates = _parse_dates(question)
+                body = "This fashion item has a 30-day return window from delivery because the order was placed during the festive sale."
+                if eligibility_query and delivery_dates:
+                    deadline = delivery_dates[-1] + timedelta(days=30)
+                    body += f" The return window ends on {deadline.day} {deadline.strftime('%B %Y')}."
+                return StructuredAnswer(self._greet(question, body), tuple(evidence))
 
         days = RETURN_DAYS.get(category)
         if category == "electronics" and delivery_dates and delivery_dates[-1] < date(2026, 8, 1):
             days = 10
         if days is None:
             return None
-        eligibility_query = any(term in normalized for term in ("still eligible", "can i return", "can return it", "return it now", "eligible for return")) or bool(
-            re.search(r"(?:अब भी|अभी भी).*(?:वापस|लौट)|(?:वापस|लौट).*(?:कर सकती|कर सकता|करूं|करूँ|योग्य)", normalized)
-        )
         if eligibility_query and delivery_dates:
             delivered = delivery_dates[-1]
-            deadline = delivered + timedelta(days=days - 1)
+            deadline = delivered + timedelta(days=days)
             if REFERENCE_DATE < delivered:
                 return StructuredAnswer(
                     self._greet(question, "I can’t assess return eligibility before the delivery date. Please check the delivery date shown in My Orders."),

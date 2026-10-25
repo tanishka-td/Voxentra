@@ -69,7 +69,21 @@ is 20 October 2026.
 
 The conversation controller asks for order verification before it shares order
 facts. Its optional turn log redacts verification numbers and omits them from tool
-call records.
+call records. While verification is pending, general policy questions can still be
+answered; order-specific follow-ups stay behind the verification gate. After two
+failed attempts, the order remains locked for the rest of that conversation.
+
+### Evaluate multi-turn conversations
+
+`python -m zentromart_support.conversation_eval --lexical-only`
+
+This runs the supplied 23 conversation scenarios and saves per-turn decisions,
+tool calls, evidence IDs, and approximate local checks to
+`outputs/step3_conversations.jsonl`. It may create synthetic handover tickets in
+the dataset tool folder. Use `--limit 1` for a small first run, or `--overwrite`
+to replace an existing report. To rerun only selected scenarios without
+recreating tickets from the rest of the set, repeat `--conversation-id`, for
+example `--conversation-id PC003 --conversation-id PC004`.
 
 ### Process a folder of voice messages
 
