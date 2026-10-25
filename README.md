@@ -7,13 +7,15 @@ order tools, and Gnani speech recognition and synthesis.
 The capstone dataset is required locally for development. It is not included in
 this repository or in a submission package.
 
+Public repository: https://github.com/tanishka-td/Voxentra
+
 ## Project folders
 
 - `src/zentromart_support/`: application code.
 - `Capstone_Project_Dataset_FTTT_2026/`: local practice dataset; excluded from Git and submission.
-- `local_data/voice_samples/`: local recordings grouped by language or scenario; excluded from Git.
-- `outputs/phase1_baseline/` through `outputs/phase4_voice/`: generated evaluation and voice results, grouped by project phase.
-- `.cache/`: local embedding cache; excluded from Git.
+- `submission/`: report and sample outputs required for the submission; the demo video is still to be added.
+- `outputs/`: generated evaluation and voice results; recreated when evaluation commands run and excluded from Git.
+- `.cache/`: generated embedding cache; recreated as needed and excluded from Git.
 
 ## Setup
 
@@ -155,8 +157,8 @@ runs remain separate conversations.
 Select a language for a batch with `--stt-language` and `--tts-language`:
 
 ```powershell
-python -m zentromart_support.batch_run local_data/voice_samples/hindi --output outputs/phase4_voice/hindi --stt-language hi-IN --tts-language hi-IN
-python -m zentromart_support.batch_run local_data/voice_samples/hinglish --output outputs/phase4_voice/hinglish --stt-language en-IN --tts-language auto
+python -m zentromart_support.batch_run path/to/hindi_audio --output outputs/phase4_voice/hindi --stt-language hi-IN --tts-language hi-IN
+python -m zentromart_support.batch_run path/to/hinglish_audio --output outputs/phase4_voice/hinglish --stt-language en-IN --tts-language auto
 ```
 
 For a mixed-language folder, run separate batches by language. The current
