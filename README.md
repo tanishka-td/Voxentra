@@ -40,8 +40,9 @@ Public repository: https://github.com/tanishka-td/Voxentra
    `DATASET_DIR` to its location.
 
 The text model defaults to `gemini-3.5-flash-lite`; embeddings default to
-`gemini-embedding-001`. Voice language defaults to `en-IN`. For the demo, the
-target languages are English, Hindi, and Hinglish. Use one language per batch:
+`gemini-embedding-001`. Voice language defaults to `en-IN`. The demo targets
+English, Hindi, and Hinglish; a per-file language manifest can mix them in one
+batch:
 
 | Language | Gnani STT locale | Gnani TTS language |
 | --- | --- | --- |
@@ -49,8 +50,9 @@ target languages are English, Hindi, and Hinglish. Use one language per batch:
 | Hindi | `hi-IN` | `hi-IN` |
 | Hinglish | `en-IN` | `auto` |
 
-The Gnani voice, speech model, and languages can be set in `.env` or with the
-batch command's language options. Hinglish STT uses `en-IN`; for TTS, use
+The Gnani voice, speech model, and default languages can be set in `.env` or with
+the batch command's language options. A language manifest can override the
+language per audio file. Hinglish STT uses `en-IN`; for TTS, use
 `auto` so the model can handle the mixed-language reply. The installed Gnani
 SDK rejects `hi-en` as a TTS language code.
 
@@ -144,9 +146,11 @@ python -m zentromart_support.batch_run path/to/audio_folder --output outputs/pha
 By default, each input file starts a separate, single-turn conversation. The
 interactive conversation interface accepts text follow-up turns. The batch
 runner saves a transcript, reply text, evidence record, and reply audio for each
-file. Gnani is the only configured speech provider. A 16 kHz, mono, 16-bit PCM
-WAV works without conversion; other input audio requires `ffmpeg` to convert it
-for Gnani STT.
+file. Each JSON record lists `evidence_ids_used` and only the evidence chunks
+the agent selected as supporting the reply, along with the speech settings used.
+Gnani is the only configured speech provider. A 16 kHz, mono, 16-bit PCM WAV
+works without conversion; other input audio requires `ffmpeg` to convert it for
+Gnani STT.
 
 To process ordered recordings as voice follow-up turns in one conversation, add
 `--single-conversation`. Files are processed alphabetically by filename, so use
@@ -154,15 +158,33 @@ names such as `01_question.wav`, `02_followup.wav`, and `03_verification.wav`.
 This shares order and verification context only for that batch; separate batch
 runs remain separate conversations.
 
-Select a language for a batch with `--stt-language` and `--tts-language`:
+For a folder containing multiple languages, create a JSON manifest keyed by each
+audio filename. Per-file values override the command options or `.env` defaults:
+
+```json
+{
+  "01_english.wav": {"stt_language": "en-IN", "tts_language": "en-IN"},
+  "02_hindi.wav": {"stt_language": "hi-IN", "tts_language": "hi-IN"},
+  "03_hinglish.wav": {"stt_language": "en-IN", "tts_language": "auto"}
+}
+```
+
+Pass the manifest with `--language-manifest`:
+
+```powershell
+python -m zentromart_support.batch_run path/to/audio_folder --single-conversation --language-manifest path/to/languages.json --output outputs/phase4_voice/mixed
+```
+
+For a folder in one language, set the pair on the command:
 
 ```powershell
 python -m zentromart_support.batch_run path/to/hindi_audio --output outputs/phase4_voice/hindi --stt-language hi-IN --tts-language hi-IN
 python -m zentromart_support.batch_run path/to/hinglish_audio --output outputs/phase4_voice/hinglish --stt-language en-IN --tts-language auto
 ```
 
-For a mixed-language folder, run separate batches by language. The current
-runner applies one STT/TTS language pair to every file in a single invocation.
+Without a manifest entry for a file, the command options or environment defaults
+apply. The manifest selects a locale for each file; it does not automatically
+detect the spoken language.
 
 ## Validate the dataset
 
@@ -174,6 +196,6 @@ python Capstone_Project_Dataset_FTTT_2026/validate_dataset.py
 
 ## Local-only files
 
-`.env`, the dataset, generated `outputs/`, embedding cache, local voice samples,
-and Python build metadata are ignored by Git. Keep API keys and personal voice
-recordings out of the submission package.
+`.env`, the dataset, generated `outputs/`, embedding cache, and Python build
+metadata are ignored by Git. Keep API keys and personal voice recordings out of
+the submission package.

@@ -1,0 +1,179 @@
+"""Run the agent on every customer audio file in a folder."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import traceback
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+from .agent import GroundedTextAgent
+from .capstone_tools import CapstoneToolGateway
+from .conversation import ConversationAgent, ConversationState
+from .retrieval import KnowledgeRetriever
+from .voice import GnaniVoiceIO, SUPPORTED_AUDIO_SUFFIXES, safe_transcript
+
+
+def _atomic_write(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_bytes(payload)
+    temporary.replace(path)
+
+
+def _load_language_manifest(
+    path: Path | None,
+    audio_files: list[Path],
+) -> dict[str, dict[str, str]]:
+    if path is None:
+        return {}
+    try:
+        with path.open(encoding="utf-8") as source:
+            payload = json.load(source)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Could not read language manifest {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("Language manifest must be a JSON object keyed by audio filename.")
+
+    known_names = {audio.name.casefold(): audio.name for audio in audio_files}
+    manifest: dict[str, dict[str, str]] = {}
+    for supplied_name, settings in payload.items():
+        if not isinstance(supplied_name, str) or supplied_name.casefold() not in known_names:
+            raise ValueError(f"Language manifest names an audio file not in the folder: {supplied_name}")
+        if not isinstance(settings, dict):
+            raise ValueError(f"Language settings for {supplied_name} must be a JSON object.")
+        unknown = set(settings) - {"stt_language", "tts_language"}
+        if unknown:
+            raise ValueError(f"Unknown language setting(s) for {supplied_name}: {', '.join(sorted(unknown))}")
+        normalized: dict[str, str] = {}
+        for key, value in settings.items():
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{key} for {supplied_name} must be a non-empty string.")
+            normalized[key] = value.strip()
+        manifest[known_names[supplied_name.casefold()]] = normalized
+    return manifest
+
+
+def main() -> None:
+    root = Path(__file__).resolve().parents[2]
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("audio_folder", type=Path, help="Folder containing audio files to process.")
+    parser.add_argument(
+        "--output", type=Path, default=root / "outputs" / "phase4_voice" / "voice_batch"
+    )
+    parser.add_argument("--dataset", type=Path, default=Path(os.getenv("DATASET_DIR", root / "Capstone_Project_Dataset_FTTT_2026")))
+    parser.add_argument("--stt-language", help="Gnani STT locale; defaults to GNANI_STT_LANGUAGE.")
+    parser.add_argument("--tts-language", help="Gnani TTS locale; defaults to GNANI_TTS_LANGUAGE.")
+    parser.add_argument(
+        "--language-manifest",
+        type=Path,
+        help="JSON mapping audio filenames to per-file stt_language and tts_language overrides.",
+    )
+    parser.add_argument(
+        "--single-conversation",
+        action="store_true",
+        help="Treat audio files in filename order as turns in one conversation.",
+    )
+    args = parser.parse_args()
+
+    audio_folder = args.audio_folder.resolve()
+    if not audio_folder.is_dir():
+        parser.error(f"Audio folder does not exist: {audio_folder}")
+    audio_files = sorted(
+        (
+            path for path in audio_folder.iterdir()
+            if path.is_file() and path.suffix.casefold() in SUPPORTED_AUDIO_SUFFIXES
+        ),
+        key=lambda path: path.name.casefold(),
+    )
+    if not audio_files:
+        parser.error(f"No supported audio files found in {audio_folder}")
+    try:
+        language_manifest = _load_language_manifest(args.language_manifest, audio_files)
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    language_pairs = {
+        audio.name: (
+            language_manifest.get(audio.name, {}).get("stt_language", args.stt_language),
+            language_manifest.get(audio.name, {}).get("tts_language", args.tts_language),
+        )
+        for audio in audio_files
+    }
+
+    try:
+        text_agent = GroundedTextAgent(KnowledgeRetriever(args.dataset))
+        agent = ConversationAgent(text_agent, CapstoneToolGateway(args.dataset), args.dataset)
+        voice_clients = {
+            pair: GnaniVoiceIO(stt_language=pair[0], tts_language=pair[1])
+            for pair in dict.fromkeys(language_pairs.values())
+        }
+    except (RuntimeError, FileNotFoundError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+
+    output_dir = args.output.resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    failed_files = 0
+    shared_conversation_id = f"audio-{audio_folder.name}-{uuid.uuid4().hex[:6]}"
+    shared_state = (
+        ConversationState(conversation_id=shared_conversation_id)
+        if args.single_conversation else None
+    )
+    for audio_path in audio_files:
+        if shared_state is not None:
+            conversation_id = shared_conversation_id
+            state = shared_state
+        else:
+            conversation_id = f"audio-{audio_path.stem}-{uuid.uuid4().hex[:6]}"
+            state = ConversationState(conversation_id=conversation_id)
+        base = output_dir / audio_path.stem
+        audio_output = output_dir / f"{audio_path.stem}.wav"
+        text_output = output_dir / f"{audio_path.stem}.txt"
+        record = {
+            "conversation_id": conversation_id,
+            "input_file": audio_path.name,
+            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        }
+        try:
+            voice = voice_clients[language_pairs[audio_path.name]]
+            turn = voice.turn(audio_path, agent, state)
+            _atomic_write(audio_output, turn.audio_bytes)
+            _atomic_write(text_output, (turn.result.reply + "\n").encode("utf-8"))
+            record.update({
+                "transcript": safe_transcript(turn.transcript),
+                "speech_settings": {
+                    "stt_language": voice.stt_language,
+                    "tts_language": voice.tts_language,
+                    "tts_model": voice.model,
+                    "tts_voice": voice.voice,
+                },
+                **turn.result.to_dict(),
+                "reply_audio": audio_output.name,
+                "reply_text": text_output.name,
+            })
+            print(f"Processed {audio_path.name}")
+        except Exception as exc:
+            failed_files += 1
+            record["error"] = type(exc).__name__
+            print(f"Failed {audio_path.name}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            traceback.print_exc()
+        with base.with_suffix(".json").open("w", encoding="utf-8") as target:
+            json.dump(record, target, ensure_ascii=False, indent=2)
+            target.write("\n")
+
+    succeeded_files = len(audio_files) - failed_files
+    print(
+        f"Batch complete: {succeeded_files}/{len(audio_files)} files processed; "
+        f"records saved under {output_dir}"
+    )
+    if failed_files:
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()

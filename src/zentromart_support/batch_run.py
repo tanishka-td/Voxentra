@@ -25,6 +25,39 @@ def _atomic_write(path: Path, payload: bytes) -> None:
     temporary.replace(path)
 
 
+def _load_language_manifest(
+    path: Path | None,
+    audio_files: list[Path],
+) -> dict[str, dict[str, str]]:
+    if path is None:
+        return {}
+    try:
+        with path.open(encoding="utf-8") as source:
+            payload = json.load(source)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Could not read language manifest {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("Language manifest must be a JSON object keyed by audio filename.")
+
+    known_names = {audio.name.casefold(): audio.name for audio in audio_files}
+    manifest: dict[str, dict[str, str]] = {}
+    for supplied_name, settings in payload.items():
+        if not isinstance(supplied_name, str) or supplied_name.casefold() not in known_names:
+            raise ValueError(f"Language manifest names an audio file not in the folder: {supplied_name}")
+        if not isinstance(settings, dict):
+            raise ValueError(f"Language settings for {supplied_name} must be a JSON object.")
+        unknown = set(settings) - {"stt_language", "tts_language"}
+        if unknown:
+            raise ValueError(f"Unknown language setting(s) for {supplied_name}: {', '.join(sorted(unknown))}")
+        normalized: dict[str, str] = {}
+        for key, value in settings.items():
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{key} for {supplied_name} must be a non-empty string.")
+            normalized[key] = value.strip()
+        manifest[known_names[supplied_name.casefold()]] = normalized
+    return manifest
+
+
 def main() -> None:
     root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description=__doc__)
@@ -35,6 +68,11 @@ def main() -> None:
     parser.add_argument("--dataset", type=Path, default=Path(os.getenv("DATASET_DIR", root / "Capstone_Project_Dataset_FTTT_2026")))
     parser.add_argument("--stt-language", help="Gnani STT locale; defaults to GNANI_STT_LANGUAGE.")
     parser.add_argument("--tts-language", help="Gnani TTS locale; defaults to GNANI_TTS_LANGUAGE.")
+    parser.add_argument(
+        "--language-manifest",
+        type=Path,
+        help="JSON mapping audio filenames to per-file stt_language and tts_language overrides.",
+    )
     parser.add_argument(
         "--single-conversation",
         action="store_true",
@@ -54,11 +92,26 @@ def main() -> None:
     )
     if not audio_files:
         parser.error(f"No supported audio files found in {audio_folder}")
+    try:
+        language_manifest = _load_language_manifest(args.language_manifest, audio_files)
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    language_pairs = {
+        audio.name: (
+            language_manifest.get(audio.name, {}).get("stt_language", args.stt_language),
+            language_manifest.get(audio.name, {}).get("tts_language", args.tts_language),
+        )
+        for audio in audio_files
+    }
 
     try:
         text_agent = GroundedTextAgent(KnowledgeRetriever(args.dataset))
         agent = ConversationAgent(text_agent, CapstoneToolGateway(args.dataset), args.dataset)
-        voice = GnaniVoiceIO(stt_language=args.stt_language, tts_language=args.tts_language)
+        voice_clients = {
+            pair: GnaniVoiceIO(stt_language=pair[0], tts_language=pair[1])
+            for pair in dict.fromkeys(language_pairs.values())
+        }
     except (RuntimeError, FileNotFoundError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
@@ -87,11 +140,18 @@ def main() -> None:
             "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         }
         try:
+            voice = voice_clients[language_pairs[audio_path.name]]
             turn = voice.turn(audio_path, agent, state)
             _atomic_write(audio_output, turn.audio_bytes)
             _atomic_write(text_output, (turn.result.reply + "\n").encode("utf-8"))
             record.update({
                 "transcript": safe_transcript(turn.transcript),
+                "speech_settings": {
+                    "stt_language": voice.stt_language,
+                    "tts_language": voice.tts_language,
+                    "tts_model": voice.model,
+                    "tts_voice": voice.voice,
+                },
                 **turn.result.to_dict(),
                 "reply_audio": audio_output.name,
                 "reply_text": text_output.name,

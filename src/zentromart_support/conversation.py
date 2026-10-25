@@ -135,10 +135,17 @@ class TurnResult:
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
+        evidence_ids = [
+            str(item["evidence_id"])
+            for item in self.evidence
+            if item.get("evidence_id")
+        ]
         return {
             "reply": self.reply,
             "decision": self.decision,
             "retrieved_evidence": self.evidence,
+            "evidence_ids": evidence_ids,
+            "evidence_ids_used": evidence_ids,
             "tool_calls": self.tool_calls,
         }
 
