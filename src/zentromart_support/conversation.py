@@ -695,6 +695,25 @@ class ConversationAgent:
                 "Main madad kar sakta hoon. Order ID bata dijiye.",
             )
             return self._greet_turn(state, TurnResult(reply, "clarify"))
+
+        previous_context = " ".join(state.recent_context[:-1])
+        asks_for_missing_credit_steps = bool(
+            re.search(r"\b(?:what\s+(?:should|can|do)\s+i\s+do|what\s+if|how\s+(?:do|can|should)\s+i)\b", message, re.I)
+            and re.search(r"\b(?:credit|refund|wallet)\b", message, re.I)
+            and re.search(r"\bexpress\b.*\b(?:late|arriv\w*|fee|credit)\b", previous_context, re.I)
+        )
+        if asks_for_missing_credit_steps:
+            reply = self._localized(
+                state,
+                "The policy says the late Express fee credit is automatic within 48 hours, but it doesn’t explain what to do if the credit still doesn’t arrive. I can’t confirm another step. Would you like me to connect you with human support?",
+                "नीति के अनुसार देर से आए Express ऑर्डर का शुल्क क्रेडिट 48 घंटों में अपने आप मिलता है, लेकिन क्रेडिट न आने पर आगे क्या करना है, यह जानकारी उपलब्ध नहीं है। मैं कोई और कदम पक्का नहीं बता सकता। क्या मैं आपको मानवीय सहायता टीम से जोड़ दूँ?",
+                "Policy ke mutabik late Express order ka fee credit 48 hours mein automatically milta hai, lekin credit na aane par agla step kya hai, yeh information nahi hai. Main koi aur step confirm nahi kar sakta. Kya main aapko human support se connect karun?",
+            )
+            return self._greet_turn(
+                state,
+                TurnResult(reply, "escalate", evidence=self._evidence_records("DEL-4")),
+            )
+
         result = self.text_agent.respond(message, conversation_context=state.recent_context)
         return self._greet_turn(state, TurnResult(
             reply=result.reply,

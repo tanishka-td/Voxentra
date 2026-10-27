@@ -1,9 +1,15 @@
 {
-  "conversation_id": "audio-voice_followup-d1e84f",
+  "conversation_id": "audio-demo_inputs-796b1c",
   "input_file": "01_question.wav",
-  "generated_at_utc": "2026-10-25T09:04:48.238028+00:00",
+  "generated_at_utc": "2026-10-27T16:53:01.915491+00:00",
   "transcript": "my express order arrived a day late do i get anything back",
-  "reply": "I’m ZentroMart’s AI support assistant. If an Express order arrives after its promised date, the ₹79 Express fee paid is credited to ZentroMart Wallet automatically within 48 hours. Plus members pay no Express fee, so they do not receive this credit.",
+  "speech_settings": {
+    "stt_language": "en-IN",
+    "tts_language": "en-IN",
+    "tts_model": "timbre-v2.5",
+    "tts_voice": "Kaveri"
+  },
+  "reply": "Hi, I'm ZentroMart's AI support assistant. If an Express order arrives after its promised date, the ₹79 Express fee paid is credited to ZentroMart Wallet automatically within 48 hours. Plus members pay no Express fee, so they do not receive this credit.",
   "decision": "answer",
   "retrieved_evidence": [
     {
@@ -54,6 +60,18 @@
       "doc_type": "agent_guide",
       "score": 0.0
     }
+  ],
+  "evidence_ids": [
+    "DEL-4",
+    "DEL-2",
+    "PLS-2",
+    "STY-1"
+  ],
+  "evidence_ids_used": [
+    "DEL-4",
+    "DEL-2",
+    "PLS-2",
+    "STY-1"
   ],
   "tool_calls": [],
   "reply_audio": "01_question.wav",

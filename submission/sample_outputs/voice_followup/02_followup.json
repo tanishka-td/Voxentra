@@ -1,10 +1,16 @@
 {
-  "conversation_id": "audio-voice_followup-d1e84f",
-  "input_file": "02_followup.wav",
-  "generated_at_utc": "2026-10-25T09:05:04.475573+00:00",
-  "transcript": "what should i do if i still don't receive the credit",
-  "reply": "I cannot confirm it from the available information. Would you like me to connect you with human support?",
-  "decision": "escalate",
+  "conversation_id": "audio-demo_inputs-796b1c",
+  "input_file": "followupbruh.wav",
+  "generated_at_utc": "2026-10-27T22:23:17.051865+05:30",
+  "transcript": "i am a plus member do i still get the credit",
+  "speech_settings": {
+    "stt_language": "en-IN",
+    "tts_language": "en-IN",
+    "tts_model": "timbre-v2.5",
+    "tts_voice": "Kaveri"
+  },
+  "reply": "As a ZentroMart Plus member who pays no express fee, you do not receive the credit for a late express delivery.",
+  "decision": "answer",
   "retrieved_evidence": [
     {
       "evidence_id": "DEL-4",
@@ -17,55 +23,13 @@
       "effective_from": "2026-04-01",
       "doc_type": "policy",
       "score": 0.018361
-    },
-    {
-      "evidence_id": "DEL-1",
-      "source_type": "policy",
-      "source_id": "pol_delivery_shipping.md",
-      "section_id": "DEL-1",
-      "title": "Delivery times",
-      "text": "| Delivery type | Metro cities | Other locations |\n| --- | --- | --- |\n| Standard | 3 to 6 business days | 5 to 9 business days |\n| Express (selected pincodes) | Next business day if ordered before 2 pm, otherwise the business day after | Not available |\n\nEach order shows a promised delivery date at checkout. That date is the commitment.",
-      "status": "current",
-      "effective_from": "2026-04-01",
-      "doc_type": "policy",
-      "score": 0.017867
-    },
-    {
-      "evidence_id": "PLS-2",
-      "source_type": "policy",
-      "source_id": "pol_plus_membership.md",
-      "section_id": "PLS-2",
-      "title": "Benefits",
-      "text": "- Free Express delivery where Express is available.\n- No reverse pickup fee on any return.\n- Refunds on returns are initiated at pickup, without waiting for quality check.\n\nZentroMart Plus does **not** change return windows, return eligibility or refund timelines after initiation.",
-      "status": "current",
-      "effective_from": "2026-01-01",
-      "doc_type": "policy",
-      "score": 0.01596
-    },
-    {
-      "evidence_id": "CPN-2",
-      "source_type": "policy",
-      "source_id": "pol_coupons_offers.md",
-      "section_id": "CPN-2",
-      "title": "Expired or failed coupons",
-      "text": "A coupon that was valid but failed to apply because of a technical error can be re-issued once by support if the order was placed within the coupon's validity. Coupons that had already expired cannot be re-issued.",
-      "status": "current",
-      "effective_from": "2026-06-01",
-      "doc_type": "policy",
-      "score": 0.015426
-    },
-    {
-      "evidence_id": "REF-4",
-      "source_type": "policy",
-      "source_id": "pol_refunds.md",
-      "section_id": "REF-4",
-      "title": "Partial refunds and coupons",
-      "text": "If part of an order is returned, the refund is the price paid for that item after its share of any coupon discount. If the remaining order falls below the coupon's minimum order value, the coupon discount on the remaining items is deducted from the refund.",
-      "status": "current",
-      "effective_from": "2026-06-15",
-      "doc_type": "policy",
-      "score": 0.015065
     }
+  ],
+  "evidence_ids": [
+    "DEL-4"
+  ],
+  "evidence_ids_used": [
+    "DEL-4"
   ],
   "tool_calls": [],
   "reply_audio": "02_followup.wav",
